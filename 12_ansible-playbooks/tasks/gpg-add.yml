@@ -1,0 +1,21 @@
+- name: Print Package Manager
+  debug:
+    msg: "{{ ansible_facts['pkg_mgr'] }}"
+
+# Apt
+- name: Import Apt Signing Key from URL, If Fingerprint Not Present
+  ansible.builtin.apt_key:
+    id: "{{ gpg.fingerprint }}"
+    url: "{{ gpg.url }}"
+    state: present
+  when:
+    ansible_facts['pkg_mgr'] == "apt"
+
+# RPM
+- name: Import RPM Signing Key from URL, If Fingerprint Not Present
+  ansible.builtin.rpm_key:
+    fingerprint: "{{ gpg.fingerprint }}"
+    key: "{{ gpg.url }}"
+    state: present
+  when:
+    ansible_facts['pkg_mgr'] == "rpm" or ansible_facts['pkg_mgr'] == "dnf"

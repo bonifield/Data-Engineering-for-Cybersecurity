@@ -1,0 +1,28 @@
+filebeat.inputs:
+
+# Input that reads Edge update logs
+- type: filestream
+  enabled: true
+  id: edgeupdate-logs
+  paths:
+    - C:/ProgramData/Microsoft/EdgeUpdate/Log/*.log
+    # more files here (NOT event logs)
+  encoding: utf-16le-bom 
+
+# Module locations
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+
+tags: ["windows", "tags-for-everybody", "you-get-a-tag", "and-you-get-a-tag"]
+
+output.logstash:
+  enabled: true
+  hosts: ["logstash.local:5044"]
+  ssl.enabled: false
+#  ssl.enabled: true
+#  ssl.verification_mode: full
+#  ssl.certificate: "C:/Program Files/Filebeat/filebeat.local.flex.cert.pem"
+#  ssl.key: "C:/Program Files/Filebeat/filebeat.local.flex.key.pem"
+#  ssl.key_passphrase: "abcd1234"
+#  ssl.certificate_authorities:
+#    - "C:/Program Files/Filebeat/ca-chain.cert.pem"

@@ -1,0 +1,29 @@
+- name: Install Elasticsearch
+  # IF ONLY RUNNING A SINGLE NODE
+  #delegate_to: "{{ elastic_testnode }}"
+  #run_once: true
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - elasticsearch
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Generate elasticsearch.yml
+  # IF ONLY RUNNING A SINGLE NODE
+  #delegate_to: "{{ elastic_testnode }}"
+  # IF RUNNING ELASTICSEARCH LOCALLY
+  #delegate_to: localhost
+  #run_once: true
+  template:
+    src: templates/elasticsearch.yml.j2
+    # then copy this somewhere
+    #dest: output/elasticsearch.yml
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: root
+    group: elasticsearch
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"

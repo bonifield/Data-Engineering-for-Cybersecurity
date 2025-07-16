@@ -1,0 +1,21 @@
+sudo apt install python3-virtualenv
+
+virtualenv myapp
+myapp/bin/pip install flask pyopenssl
+
+# make app.py
+
+chmod +x app.py
+./app.py
+
+curl -k https://localhost:5000/json/
+
+#===========================
+# alternatively, use "uv" instead of virtualenv
+#===========================
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv init
+uv add flask pyopenssl
+chmod +x app.py
+uv run app.py

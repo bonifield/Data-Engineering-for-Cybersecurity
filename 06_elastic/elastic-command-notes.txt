@@ -1,0 +1,599 @@
+# ALL OPENSSL CONFIGS AND COMMANDS ARE ALSO IN THE TLS CHAPTER DIRECTORY
+# USE THE WILDCARD CERTIFICATE FOR THIS CHAPTER
+
+
+
+#
+# Chapter 6 Clicksheet - Elasticsearch, Kibana, Elastic Agent x3
+#
+
+
+
+#====================
+# TLS
+#====================
+
+# create wildcard config
+# add hostnames as needed by appending DNS.# entries
+nano tls/configs/openssl-flex-wildcard.local.cnf
+
+### BEGIN CONFIG ###
+###############################################################
+[ req ]
+prompt             = no
+default_bits       = 4096
+default_md         = sha512
+default_keyfile    = tls/keys/wildcard.local.flex.key.pem
+distinguished_name = flex_distinguished_name
+req_extensions     = flex_cert
+
+###############################################################
+[ flex_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = MO
+localityName                = St. Louis
+organizationName            = Business, Inc.
+organizationalUnitName      = Information Technology
+commonName                  = Wildcard and Multiple Hostnames Flex
+emailAddress                = none@localhost
+
+###############################################################
+[ flex_cert ]
+nsComment              = OpenSSL Wildcard Certificate for Clients or Servers
+subjectAltName         = @alternate_names
+
+###############################################################
+[ alternate_names ]
+DNS.1  = *.local
+DNS.2  = filebeat.local
+DNS.3  = winlogbeat.local
+DNS.4  = packetbeat.local
+DNS.5  = logstash.local
+DNS.6  = logstash01.local
+DNS.7  = logstash02.local
+DNS.8  = logstash03.local
+DNS.9  = rsyslog.local
+DNS.10  = elasticsearch.local
+DNS.11  = elasticsearch01.local
+DNS.12  = elasticsearch02.local
+DNS.13  = elasticsearch03.local
+DNS.14  = kafka.local
+DNS.15  = kafka01.local
+DNS.16  = kafka02.local
+DNS.17  = kafka03.local
+DNS.18  = kibana.local
+DNS.19  = fleet.local
+DNS.20  = elasticagent.local
+DNS.21  = filebeat
+DNS.22  = winlogbeat
+DNS.23  = packetbeat
+DNS.24  = logstash
+DNS.25  = logstash01
+DNS.26  = logstash02
+DNS.27  = logstash03
+DNS.28  = rsyslog
+DNS.29  = elasticsearch
+DNS.30  = elasticsearch01
+DNS.31  = elasticsearch02
+DNS.32  = elasticsearch03
+DNS.33  = kafka
+DNS.34  = kafka01
+DNS.35  = kafka02
+DNS.36  = kafka03
+DNS.37  = kibana
+DNS.38  = fleet
+DNS.39  = elasticagent
+DNS.40  = minio
+DNS.41  = minio.local
+DNS.42  = localhost
+### END CONFIG ###
+
+
+
+# create keys and CSRs
+openssl req -config tls/configs/openssl-flex-wildcard.local.cnf -new -out tls/csr/wildcard.local.flex.csr -outform PEM -passout pass:abcd1234
+
+# sign the CSRs to create the signed certificates
+openssl ca -batch -notext -config tls/configs/openssl-intermediateca.cnf -passin pass:abcd1234 -policy signing_policy -extensions flex_cert -out tls/certs/wildcard.local.flex.cert.pem -infiles tls/csr/wildcard.local.flex.csr
+
+# ensure X509 extensions copied from CSR to certificate
+openssl x509 -in tls/certs/wildcard.local.flex.cert.pem -text -noout
+#######
+--snip--
+    X509v3 Extended Key Usage: 
+        TLS Web Client Authentication, TLS Web Server Authentication
+    X509v3 Subject Alternative Name:
+        DNS:elasticsearch, DNS:elasticsearch.local, DNS:...
+--snip--
+#######
+
+# verify cert against CA
+openssl verify -CAfile tls/certs/ca-chain.cert.pem tls/certs/wildcard.local.flex.cert.pem
+
+# create unencrypted (nopass) key
+# DO NOT DO THIS IN PRODUCTION
+openssl rsa -in wildcard.local.flex.key.pem -out wildcard.local.flex.key.nopass.pem
+
+# create PKCS#12/PFX container
+openssl pkcs12 -export -inkey tls/keys/wildcard.local.flex.key.pem -in tls/certs/wildcard.local.flex.cert.pem -passin pass:abcd1234 -out tls/certs/wildcard.local.flex.pkcs12 -passout pass:abcd1234
+
+
+
+#====================
+# Firewall and DNS
+#====================
+
+# open firewall
+# UFW
+sudo ufw allow 22,9200,5044,5601,8220,8221/tcp
+# Firewalld
+sudo firewall-cmd --permanent --add-port={22,9200,5044,5601,8220,8221}/tcp
+
+# create DNS entries or add following to hosts file
+# Linux: /etc/hosts
+# Windows: C:\Windows\System32\drivers\etc\hosts
+# add more elasticsearch0... entries as needed
+##############
+192.168.8.130    elasticsearch01
+192.168.8.130    elasticsearch01.local
+192.168.8.130    kibana
+192.168.8.130    kibana.local
+192.168.8.130    elasticagent
+192.168.8.130    elasticagent.local
+192.168.8.131    fleet
+192.168.8.131    fleet.local
+192.168.8.131    logstash
+192.168.8.131    logstash.local
+# more as needed
+##############
+
+
+
+#====================
+# Elasticsearch
+#====================
+
+# get Elastic GPG key
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+
+# add Elastic repository
+echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+
+# update apt cache and install Elasticsearch and Kibana
+sudo apt update && sudo apt install elasticsearch kibana
+
+# take note of superuser "elastic" password
+# PASTE YOUR PASSWORD HERE (testing only!): <your-password>
+
+#-------------
+# download TLS files from command station
+# on command station, navigate to ~/tls/, and start a Python webserver
+python3 -m http.server 8080
+
+# on Elasticsearch node, become root
+sudo su -
+
+#-------------
+# download TLS files and set permissions
+cd /etc/elasticsearch/certs
+wget 192.168.8.133:8080/tls/certs/wildcard.local.flex.pkcs12
+wget 192.168.8.133:8080/tls/certs/ca-chain.cert.pem
+chown -R root:elasticsearch *
+chmod 0640 *
+
+#-------------
+# backup elasticsearch.yml
+cd /etc/elasticsearch
+mv elasticsearch.yml elasticsearch.yml.original
+
+#-------------
+# create main Elasticsearch config
+nano elasticsearch.yml
+#############
+node.name: "elasticsearch01.local"
+node.roles: [ "master", "data", "ingest", "transform" ]
+cluster.name: "es" 
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: true
+xpack.security.http.ssl: 
+  enabled: true
+  verification_mode: full
+  keystore.path: "certs/wildcard.local.flex.pkcs12"
+  certificate_authorities: "certs/ca-chain.cert.pem"
+xpack.security.transport.ssl: 
+  enabled: true
+  verification_mode: full
+  keystore.path: "certs/wildcard.local.flex.pkcs12"
+  certificate_authorities: "certs/ca-chain.cert.pem"
+network.host: ["elasticsearch01.local"] 
+bootstrap.memory_lock: true
+cluster.initial_master_nodes: ["elasticsearch01.local"] 
+discovery.seed_hosts: ["elasticsearch01.local"]
+#############
+
+#-------------
+# add keystore values for TLS PKCS12
+# password is: abcd1234
+/usr/share/elasticsearch/bin/elasticsearch-keystore add xpack.security.http.ssl.keystore.secure_password
+/usr/share/elasticsearch/bin/elasticsearch-keystore add xpack.security.transport.ssl.keystore.secure_password
+
+#-------------
+# set JVM options
+nano /etc/elasticsearch/jvm.options.d/heap.options
+##############
+-Xms1g
+-Xmx1g
+##############
+
+#-------------
+# start Elasticsearch
+# notice Elasticsearch is NOT enabled; it won't start on boot
+systemctl start elasticsearch
+tail -f /var/log/elasticsearch/es.log
+
+#-------------
+# change default passwords for "elastic" and "kibana_system" users
+# password is: abcd1234
+/usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic -i --url https://elasticsearch01.local:9200
+/usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana_system -i --url https://elasticsearch01.local:9200
+
+#-------------
+# test API connections
+# returns generic cluster information
+curl -sku "elastic:abcd1234" https://elasticsearch01.local:9200
+# returns column results; should say "green" in the middle
+curl -sku "elastic:abcd1234" https://elasticsearch01.local:9200/_cat/health
+# returns cluster name and status; should say "green"
+curl -sku "elastic:abcd1234" "https://elasticsearch01.local:9200/_cluster/health?pretty&filter_path=cluster_name,status"
+# view all nodes
+curl -sku "elastic:abcd1234" "https://elasticsearch01.local:9200/_cat/nodes?v"
+
+*** snapshot your VM, remember to restart Elasticsearch ***
+*** snapshot your VM, remember to restart Elasticsearch ***
+*** snapshot your VM, remember to restart Elasticsearch ***
+
+#-------------
+# OPTIONAL
+# adding more Elasticsearch nodes
+# on each node:
+- Change node.name and network.host to the new host’s values.
+- Update keystore passwords for TLS files.
+- Add at least one existing master node to discovery.seed_hosts.
+- Do not change the elastic and kibana_system passwords, as this change will happen automatically.
+
+*** snapshot any new VMs, remember to restart Elasticsearch ***
+*** snapshot any new VMs, remember to restart Elasticsearch ***
+*** snapshot any new VMs, remember to restart Elasticsearch ***
+
+
+
+#====================
+# Kibana
+#====================
+
+# Kibana was installed at the same time as Elasticsearch
+
+#-------------
+# become root, if you stopped being root from the Elasticsearch section
+sudo su -
+
+#-------------
+# get TLS files and set permissions
+mkdir -p /etc/kibana/certs
+cd /etc/kibana/certs
+wget 192.168.8.133:8080/tls/certs/wildcard.local.flex.pkcs12
+wget 192.168.8.133:8080/tls/certs/ca-chain.cert.pem
+chown -R root:kibana *
+chmod 0640 *
+
+#-------------
+# create Kibana encryption keys
+/usr/share/kibana/bin/kibana-encryption-keys generate --force
+# PASTE OUTPUT HERE
+##############
+xpack.encryptedSavedObjects.encryptionKey: 08fcbb6717c24055dcb3179cd82ded33
+xpack.reporting.encryptionKey: bfd6dc015faf0ba6b36b19913d52bffd
+xpack.security.encryptionKey: d924089b14f70226c09b065bc623f613
+##############
+
+#-------------
+# backup kibana.yml
+mv /etc/kibana/kibana.yml /etc/kibana/kibana.yml.original
+
+#-------------
+# open new kibana.yml
+nano /etc/kibana/kibana.yml
+### BEGIN CONFIG ###
+server.publicBaseUrl: "https://kibana.local:5601"
+pid.file: /run/kibana/kibana.pid
+server.host: "kibana.local"
+server.port: "5601"
+elasticsearch.hosts: ["https://elasticsearch01.local:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.ssl.verificationMode: "full"
+elasticsearch.ssl.keystore.path: "/etc/kibana/certs/wildcard.local.flex.pkcs12"
+elasticsearch.ssl.certificateAuthorities: ["/etc/kibana/certs/ca-chain.cert.pem"]
+server.ssl.enabled: true
+server.ssl.clientAuthentication: none
+server.ssl.keystore.path: "/etc/kibana/certs/wildcard.local.flex.pkcs12"
+server.ssl.certificateAuthorities: ["/etc/kibana/certs/ca-chain.cert.pem"]
+logging:
+  appenders:
+    file:
+      type: file
+      fileName: /var/log/kibana/kibana.log
+      layout:
+        type: json
+  root:
+    appenders:
+      - default
+      - file
+xpack.encryptedSavedObjects.encryptionKey: 08fcbb6717c24055dcb3179cd82ded33
+xpack.reporting.encryptionKey: bfd6dc015faf0ba6b36b19913d52bffd
+xpack.security.encryptionKey: d924089b14f70226c09b065bc623f613
+### END CONFIG ###
+
+#-------------
+# add Kibana keystore values (Elasticsearch password, 2x password for PKCS#12)
+# password is: abcd1234
+/usr/share/kibana/bin/kibana-keystore add elasticsearch.password
+/usr/share/kibana/bin/kibana-keystore add elasticsearch.ssl.keystore.password
+/usr/share/kibana/bin/kibana-keystore add server.ssl.keystore.password
+
+*** snapshot your VM ***
+*** snapshot your VM ***
+*** snapshot your VM ***
+
+#-------------
+# start Kibana, then monitor every second using watch (CTRL+C to exit), or tail the log
+systemctl start kibana
+watch -n 1 -d systemctl status kibana
+tail -f /var/log/kibana/kibana.log | jq '.["message"]'
+
+#-------------
+# open Kibana in your browser
+https://kibana.local:5601
+# log in with
+# username: elastic
+# password: abcd1234
+
+#-------------
+# turn off usage statistics and enable dark mode
+Kibana hamburger menu --> click Stack Management
+Left menu, Kibana section --> click Advanced Settings
+	Space Settings --> search for "dark" --> enable "Dark mode", Save
+	Global Settings --> search for "usage" --> disable "Usage collection", Save
+F5 to refresh
+
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+
+
+
+#====================
+# Elastic Agent - Fleet Server
+# *** you can only run one Elastic Agent per host ***
+#====================
+
+# follow steps in "The Fleet Server" section
+Kibana hamburger menu --> Fleet --> Settings --> Add output
+name: My Elasticsearch
+type: Elasticsearch
+hosts: https://elasticsearch01.local:9200
+# you could add additional Elasticsearch nodes to this field in the future, such as https://elasticsearch02.local:9200
+default output for agent integrations: toggle ON
+default output for monitoring: toggle ON
+Advanced YAML section, paste the contents of the CA chain. Be sure to copy the root CA and intermediate CA into the following bulleted-list format, with the proper indentation:
+#######
+ssl:
+  certificate_authorities:
+  - |
+    -----BEGIN CERTIFICATE-----
+    MIIGVzCCBD...
+    --snip--
+  - |
+    -----BEGIN CERTIFICATE-----
+    MIIINjCCBh6g…
+    --snip--
+#######
+# click "Save and apply settings"
+
+#-------------
+# create Fleet policy
+Kibana hamburger menu --> Fleet --> click the blue Add Fleet Server button and select the Advanced tab
+Step 1, “Select a policy for Fleet Server,” leave the name “Fleet Server policy 1” populated, then click Create policy.
+Step 2, “Choose a deployment mode for security,” toggle Production so you can use your own certificates.
+Step 3, “Add your Fleet Server host,” set the name to "My Fleet" and the URL to https://fleet.local:8220. Click Add Host.
+Click the blue Generate a service token 
+# copy the service token somewhere, as you'll need it shortly
+
+#-------------
+# download TLS files and set permissions
+mkdir -p /opt/Elastic/Agent/certs/
+cd /opt/Elastic/Agent/certs/
+wget 192.168.8.133:8080/tls/certs/wildcard.local.flex.cert.pem
+wget 192.168.8.133:8080/tls/keys/wildcard.local.flex.key.nopass.pem
+wget 192.168.8.133:8080/tls/certs/ca-chain.cert.pem
+chmod 0640 *
+cd
+
+#-------------
+# download Elastic Agent, extract it, and cd into the new directory
+# SUBSTITUTE X.Y.Z FOR THE LATEST VERSION OF ELASTIC AGENT
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-X.Y.X-linux-x86_64.tar.gz
+tar xzvf elastic-agent-X.Y.Z-linux-x86_64.tar.gz
+cd elastic-agent-X.Y.Z-linux-x86_64
+
+#-------------
+# install Elastic Agent, which will run a Fleet Server role
+# paste the service token copied from Kibana
+./elastic-agent install \
+  --force \
+  --url=https://fleet.local:8220 \
+  --fleet-server-port=8220 \
+  --fleet-server-es=https://elasticsearch01.local:9200 \
+  --fleet-server-service-token=AAEAAWVsYXN0aWMvZmx... \
+  --fleet-server-policy=fleet-server-policy \
+  --certificate-authorities=/opt/Elastic/Agent/certs/ca-chain.cert.pem \
+  --fleet-server-es-ca=/opt/Elastic/Agent/certs/ca-chain.cert.pem \
+  --fleet-server-cert=/opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem \
+  --fleet-server-cert-key=/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem \
+  --elastic-agent-cert=/opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem \
+  --elastic-agent-cert-key=/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem \
+  --fleet-server-client-auth=required
+
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+
+
+
+#====================
+# Elastic Agent - Agent Policy
+# *** you can only run one Elastic Agent per host ***
+#====================
+
+Kibana hamburger menu --> Fleet --> click the blue Add agent button
+Step 1, “What type of host do you want to monitor,” leave “Agent policy 1” populated and click the Create policy button.
+Step 2, “Enroll in Fleet,” leave the option toggled on.
+Step 3, shows more installation commands for Elastic Agent, but more importantly, it shows an enrollment token, which authorizes your Agent to join the Fleet; copy it somewhere temporarily.
+
+#-------------
+# download TLS files and set permissions
+mkdir -p /opt/Elastic/Agent/certs/
+cd /opt/Elastic/Agent/certs/
+wget 192.168.8.133:8080/tls/certs/wildcard.local.flex.cert.pem
+wget 192.168.8.133:8080/tls/keys/wildcard.local.flex.key.nopass.pem
+wget 192.168.8.133:8080/tls/certs/ca-chain.cert.pem
+chmod 0640 *
+cd
+
+#-------------
+# download Elastic Agent, extract it, and cd into the new directory
+# SUBSTITUTE X.Y.Z FOR THE LATEST VERSION OF ELASTIC AGENT
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-X.Y.Z-linux-x86_64.tar.gz
+tar xzvf elastic-agent-X.Y.Z-linux-x86_64.tar.gz
+cd elastic-agent-X.Y.Z-linux-x86_64
+
+#-------------
+# install the Elastic Agent, which will run a regular fleet-connected data collection policy
+# paste the enrollment token copied from Kibana
+./elastic-agent install \
+  --force \
+  --url=https://fleet.local:8220 \
+  --enrollment-token=ZUVrVWt... \
+  --elastic-agent-cert=/opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem \
+  --elastic-agent-cert-key=/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem \
+  --certificate-authorities=/opt/Elastic/Agent/certs/ca-chain.cert.pem
+
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+*** snapshot your VM, remember to restart Elasticsearch and Kibana ***
+
+
+
+#====================
+# Logstash - Elastic Agent and Beats Input
+#====================
+
+# access dev tools
+Kibana --> Menu --> Dev Tools
+
+#-------------
+# generate API key so Logstash can send to Elasticsearch with low privileges
+POST /_security/api_key
+{
+  "name": "standalone-logstash.local", 
+  "role_descriptors": {
+    "logstash_writer": { 
+      "cluster": ["monitor"],
+      "index": [
+        {
+          "names": [
+            "logstash-*",
+            "logs-*-*",
+            "metrics-*-*",
+            "traces-*-*",
+            "synthetics-*-*",
+            ".logs-endpoint.diagnostic.collection-*",
+            ".logs-endpoint.action.responses-*",
+            "profiling-*",
+            ".profiling-*",
+            "filebeat-*", "packetbeat-*", "metricbeat-*", "winlogbeat-*", "heartbeat-*", ".ds*"
+          ],
+          "privileges": ["auto_configure", "view_index_metadata", "create_doc"]
+        }
+      ]
+    }
+  }
+}
+
+#-------------
+# outputs JSON result
+# PASTE BELOW, WILL NOT APPEAR AGAIN:
+{
+  "id": "kwouKo0BFSso9JQdUCJj",
+  "name": "standalone-logstash.local",
+  "api_key": "ANI6NTBMQx2NNDj3UIAxkw",
+  "encoded": "a3dvdUtvMEJGU3NvOUpRZFVDSmo6QU5JNk5UQk1ReDJOTkRqM1VJQXhrdw=="
+}
+
+# add id:api_key to elasticagent-mtls.conf in the Elasticsearch output
+
+#-------------
+# from inside the Logstash directory, test Logstash configurations
+bin/logstash -f conf.d/elasticagent-mtls.conf --config.test_and_exit
+bin/logstash -f conf.d/elasticagent-mtls.conf --config.reload.automatic
+
+
+
+#====================
+# Standalone Elastic Agent
+#====================
+
+Kibana hamburger menu --> Fleet --> 
+Go to Fleet then Agent policy 1. Click the blue Actions button, then click View policy. Copy the massive block of text that appears into your editor of choice.
+You should find the "outputs" and "fleet" sections of this configuration output at the top of the file, underneath a long "id" field and followed by a revision number.
+Replace all four of these sections with the following Logstash output configuration, as none of them matter for a standalone installation, and Elastic Agent will regenerate the ID dynamically after service restarts:
+#######
+outputs:
+  default:
+    type: logstash
+    ssl:
+      certificate: /opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem
+      key: /opt/Elastic/Agent/certs/wildcard.local.flex.key.pem
+      key_passphrase: abcd1234
+      certificate_authorities:
+        - /opt/Elastic/Agent/certs/ca-chain.cert.pem
+    hosts:
+      - logstash.local:5044
+--snip--
+#######
+# save this modified file as elastic-agent.yml somewhere safe
+# note "ssl.key_passphrase" isn't required with a password-less key
+
+#-------------
+# download TLS files and set permissions
+mkdir -p /opt/Elastic/Agent/certs/
+cd /opt/Elastic/Agent/certs/
+wget 192.168.8.133:8080/tls/certs/wildcard.local.flex.cert.pem
+wget 192.168.8.133:8080/tls/keys/wildcard.local.flex.key.pem
+wget 192.168.8.133:8080/tls/keys/wildcard.local.flex.key.nopass.pem
+wget 192.168.8.133:8080/tls/certs/ca-chain.cert.pem
+chmod 0640 *
+cd
+
+#-------------
+# download Elastic Agent, extract it, and cd into the new directory
+# SUBSTITUTE X.Y.Z FOR THE LATEST VERSION OF ELASTIC AGENT
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-X.Y.Z-linux-x86_64.tar.gz
+tar xzvf elastic-agent-X.Y.Z-linux-x86_64.tar.gz
+cd elastic-agent-X.Y.Z-linux-x86_64
+# COPY THE MODIFIED elastic-agent.yml INTO THIS DIRECTORY
+
+#-------------
+# install standalone Elastic Agent; don't use an enrollment token; install will read TLS files from elastic-agent.yml
+./elastic-agent install --force

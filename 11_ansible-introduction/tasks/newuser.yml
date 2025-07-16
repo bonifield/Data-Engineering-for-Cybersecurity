@@ -1,0 +1,9 @@
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html
+- name: Create User and Set Password
+  user:
+    name: "{{ user }}"
+    # if user_password is unencrypted
+    #password: "{{ user_password | password_hash('sha512') }}"
+    password: "{{ user_password }}"
+    home: "/home/{{ user }}"
+    shell: /bin/bash

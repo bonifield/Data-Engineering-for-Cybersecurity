@@ -1,0 +1,73 @@
+# hostname and basename are contrived examples in lieu of dynamic inventories or pulling DNS entries
+
+all:
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  children:
+
+    elastic:
+
+      vars:
+        requires_jks: yes
+        requires_pkcs12: yes
+        requires_client_cert: yes
+        requires_server_cert: yes
+        requires_flex_cert: yes
+
+      children:
+        elastic_servers:
+          children:
+            elasticsearch:
+              hosts:
+                elasticsearch01:
+                  ansible_host: 192.168.8.130
+                  hostname: elasticsearch01.local
+                  basename: elasticsearch01
+                elasticsearch02:
+                  ansible_host: 192.168.8.137
+                  hostname: elasticsearch02.local
+                  basename: elasticsearch02
+                elasticsearch03:
+                  ansible_host: 192.168.8.136
+                  hostname: elasticsearch03.local
+                  basename: elasticsearch03
+            elastic_kibana:
+              hosts:
+                kibana:
+                  ansible_host: 192.168.8.130
+                  hostname: kibana.local
+                  basename: kibana
+            elastic_fleet:
+              hosts:
+                fleet:
+                  ansible_host: 192.168.8.137
+                  hostname: fleet.local
+                  basename: fleet
+            elastic_agent:
+              hosts:
+                elasticagent:
+                  ansible_host: 192.168.8.136
+                  hostname: elasticagent.local
+                  basename: elasticagent
+        elastic_logstash:
+          hosts:
+            logstash:
+              ansible_host: 192.168.8.133
+              hostname: logstash.local
+              basename: logstash
+        elastic_beats:
+          hosts:
+            filebeat:
+              ansible_host: 192.168.8.130
+              hostname: filebeat.local
+              basename: filebeat
+            packetbeat:
+              ansible_host: 192.168.8.130
+              hostname: packetbeat.local
+              basename: packetbeat
+            winlogbeat:
+              ansible_host: 192.168.8.130
+              hostname: winlogbeat.local
+              basename: winlogbeat

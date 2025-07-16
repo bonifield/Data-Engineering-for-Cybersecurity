@@ -1,0 +1,24 @@
+server.publicBaseUrl: "https://{{ hostvars[inventory_hostname].hostname }}:5601"
+server.host: "{{ ansible_host }}"
+elasticsearch.hosts: ["https://{{ elastic_testnode }}:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "{{ kibana_system_user_password }}"
+elasticsearch.ssl.verificationMode: "full"
+elasticsearch.ssl.certificateAuthorities: ["/etc/kibana/certs/ca-chain.cert.pem"]
+server.ssl.enabled: true
+server.ssl.certificate: "/etc/kibana/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+server.ssl.key: "/etc/kibana/certs/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+server.ssl.keyPassphrase: "{{ ssl_key_password }}"
+server.ssl.certificateAuthorities: ["/etc/kibana/certs/ca-chain.cert.pem"]
+pid.file: /run/kibana/kibana.pid
+logging:
+  appenders:
+    file:
+      type: file
+      fileName: /var/log/kibana/kibana.log
+      layout:
+        type: json
+  root:
+    appenders:
+      - default
+      - file

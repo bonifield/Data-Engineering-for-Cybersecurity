@@ -1,0 +1,10 @@
+# see also
+# https://github.com/github/gitignore
+
+*.attr
+*.old
+*.csr
+*index-*
+*serial-*
+*.pem
+*.pass

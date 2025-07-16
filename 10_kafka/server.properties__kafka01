@@ -1,0 +1,67 @@
+# official documentation
+# https://kafka.apache.org/documentation/
+
+# example /etc/hosts where .local is for brokers, and .internal and hostname-only is for controllers
+#10.0.0.211        kafka01
+#10.0.0.211        kafka01.internal
+#192.168.8.138     kafka01.local
+#10.0.0.212        kafka02
+#10.0.0.212        kafka02.internal
+#192.168.8.136     kafka02.local
+
+#-------------
+# node identification, bootstrapping, and logs
+node.id=211
+process.roles=broker,controller
+bootstrap.servers=SSL://kafka01:9094,SSL://kafka02:9094
+log.dirs=/data/kafka
+
+#-------------
+# listener settings; ensure cert SANs include .internal
+#listeners=CONTROLLER://kafka01.internal:9093,SSL://kafka01.local:9094
+listeners=CONTROLLER://kafka01:9093,SSL://kafka01.local:9094
+advertised.listeners=SSL://kafka01.local:9094
+listener.security.protocol.map=CONTROLLER:SSL,SSL:SSL
+inter.broker.listener.name=SSL
+
+#-------------
+# controllers; ensure cert SANs include .internal if using a dedicated 10.0.0.0/8 network
+#controller.quorum.voters=211@kafka01.internal:9093,212@kafka02.internal:9093
+controller.quorum.voters=211@kafka01:9093,212@kafka02:9093
+controller.listener.names=CONTROLLER
+
+#-------------
+# SSL/TLS files
+ssl.keystore.location=/opt/kafka/certs/kafka01.local.keystore.jks
+ssl.keystore.password=abcd1234
+ssl.key.password=abcd1234
+ssl.truststore.location=/opt/kafka/certs/truststore.jks
+ssl.truststore.password=abcd1234
+ssl.client.auth=required
+ssl.endpoint.identification.algorithm=https
+
+#-------------
+# topic management
+# https://www.elastic.co/guide/en/beats/filebeat/current/kafka-output.html
+log.message.timestamp.type=LogAppendTime
+delete.topic.enable=true
+auto.create.topics.enable=false
+num.partitions=1
+log.retention.hours=168
+log.segment.bytes=1073741824
+log.retention.check.interval.ms=300000
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
+
+#-------------
+# network and IO
+num.network.threads=3
+num.io.threads=8
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+
+#-------------
+# shutdown flushing and startup recovery from disk
+num.recovery.threads.per.data.dir=1

@@ -1,0 +1,21 @@
+# transfer the file from local to remote
+- name: Copy Tarball to Remote
+  copy:
+    src: "files/{{ filename }}"
+    dest: /tmp/
+    owner: "{{ user }}"
+    group: "{{ user_group }}"
+    mode: 0700
+
+# ex. extracts a tarball named "myservice-11.2-linux-x86_64.tar.gz" to /opt/myservice
+- name: Extract Tarball
+  unarchive:
+    remote_src: yes
+    src: "/tmp/{{ filename }}"
+    dest: "{{ destination_directory }}"
+    owner: "{{ user }}"
+    group: "{{ user_group }}"
+    mode: 0700
+    extra_opts:
+    - --strip
+    - 1

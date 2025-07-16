@@ -1,0 +1,91 @@
+# Private Key
+
+- name: Generate Flex 4096-bit Private Key
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_privatekey:
+    path: "tls/keys/wildcard.{{ domain }}.flex.key.pem"
+    passphrase: "{{ ssl_key_password }}"
+    type: RSA
+    size: 4096
+    cipher: auto
+
+# CSR
+
+- name: Generate Flex CSR
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_csr:
+    path: "tls/csr/wildcard.{{ domain }}.flex.csr"
+    privatekey_path: "tls/keys/wildcard.{{ domain }}.flex.key.pem"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    digest: sha512
+    country_name: US
+    state_or_province_name: MO
+    locality_name: St. Louis
+    organization_name: Business, Inc.
+    organizational_unit_name: Information Technology
+    common_name: "*.{{ domain }}"
+    email_address: none@localhost
+    subject_alt_name: "DNS:*.{{ domain }}"
+    basicConstraints:
+      - "CA:FALSE"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+      - nonRepudiation
+    extended_key_usage:
+      - clientAuth
+      - serverAuth
+
+# Create Signed Certificates
+
+- name: Generate Flex Signed Certificate
+  delegate_to: localhost
+  run_once: true
+  openssl_certificate:
+    path: "tls/certs/wildcard.{{ domain }}.flex.cert.pem"
+    csr_path: "tls/csr/wildcard.{{ domain }}.flex.csr"
+    ownca_path: tls/caintermediate/ca-int.cert.pem
+    ownca_privatekey_path: tls/caintermediate/ca-int.key
+    ownca_privatekey_passphrase: "{{ ssl_key_password }}"
+    ownca_not_after: "+3650d"
+    ownca_digest: sha512
+    provider: ownca
+
+- name: Create Passwordless Key
+  delegate_to: localhost
+  run_once: true
+  command: "openssl rsa -in tls/keys/wildcard.{{ domain }}.flex.key.pem -passin pass:abcd1234 -out tls/keys/wildcard.{{ domain }}.flex.key.nopass.pem"
+
+# Create PKCS12 (PFX) Container
+
+- name: Generate PKCS12 (PFX) Container File
+  delegate_to: localhost
+  run_once: true
+  when: hostvars[inventory_hostname].requires_pkcs12
+  community.crypto.openssl_pkcs12:
+    action: export
+    path: "tls/certs/wildcard.{{ domain }}.flex.pkcs12"
+    friendly_name: "wildcard.{{ domain }}"
+    privatekey_path: "tls/keys/wildcard.{{ domain }}.flex.key.pem"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    passphrase: "{{ ssl_key_password }}"
+    certificate_path: "tls/certs/wildcard.{{ domain }}.flex.cert.pem"
+    other_certificates_parse_all: true
+    other_certificates:
+      - tls/certs/ca-chain.cert.pem
+    state: present
+
+# Create Java KeyStore (JKS) Container
+
+- name: Generate Java KeyStore (JKS) Container File
+  delegate_to: localhost
+  when: hostvars[inventory_hostname].requires_jks
+  community.general.java_keystore:
+    name: "{{ hostvars[inventory_hostname].hostname }}"
+    dest: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.jks"
+    certificate_path: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+    private_key_path: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    private_key_passphrase: "{{ ssl_key_password }}"
+    password: "{{ ssl_key_password }}"

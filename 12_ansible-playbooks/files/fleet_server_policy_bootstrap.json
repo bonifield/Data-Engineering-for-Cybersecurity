@@ -1,0 +1,9 @@
+{
+  "name": "fleet-server-policy",
+  "namespace": "default",
+  "monitoring_enabled": [
+    "logs",
+    "metrics"
+  ],
+  "has_fleet_server": "true"
+}

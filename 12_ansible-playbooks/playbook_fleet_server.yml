@@ -1,0 +1,256 @@
+#
+# ansible-playbook -JKi inventory-elastic.yml playbook_fleet_server.yml
+#
+# https://www.elastic.co/guide/en/fleet/current/fleet-apis.html
+#
+
+- hosts: fleet
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+#################################################
+
+    - name: Initialize Fleet Setup (POST)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: POST
+        url: https://kibana.local:5601/api/fleet/setup
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+        return_content: true
+
+    - name: Add Fleet Server Hosts (PUT)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: PUT
+        url: https://kibana.local:5601/api/fleet/settings
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{ lookup('file','files/fleet_server_hosts.json') | to_json }}"
+
+    - name: Check Initialized Fleet Setup (GET)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: GET
+        url: https://kibana.local:5601/api/fleet/settings
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+        return_content: true
+
+    - name: Update Fleet Default Elasticsearch Output (PUT)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: PUT
+        url: https://kibana.local:5601/api/fleet/outputs/fleet-default-output
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{ lookup('file','files/fleet_default_output.json') | to_json }}"
+
+    - name: Create Custom Elasticsearch Output (POST)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: POST
+        url: https://kibana.local:5601/api/fleet/outputs
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{ lookup('file','files/fleet_output_elasticsearch.json') | to_json }}"
+
+    - name: Create Custom Logstash Output (POST)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: POST
+        url: https://kibana.local:5601/api/fleet/outputs
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{ lookup('file','files/fleet_output_logstash.json') | to_json }}"
+
+    - name: Bootstrap Fleet Server Policy (POST)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: POST
+        url: https://kibana.local:5601/api/fleet/agent_policies
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{ lookup('file','files/fleet_server_policy_bootstrap.json') | to_json }}"
+
+#################################################
+
+    - name: Create /opt/Elastic/Agent/certs/
+      file:
+        path: /opt/Elastic/Agent/certs/
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Copy CA Chain PEM to Remote
+      copy:
+        src: tls/certs/ca-chain.cert.pem
+        dest: /opt/Elastic/Agent/certs/
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Copy Fleet TLS Key to Remote
+      copy:
+        #src: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.nopass.pem"
+        src: tls/keys/wildcard.local.flex.key.nopass.pem
+        dest: /opt/Elastic/Agent/certs/
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Copy Fleet TLS Certificate to Remote
+      copy:
+        #src: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+        src: tls/certs/wildcard.local.flex.cert.pem
+        dest: /opt/Elastic/Agent/certs/
+        owner: root
+        group: root
+        mode: 0750
+
+#################################################
+
+    - name: Create Service Token for Fleet Server Connection to Kibana (POST)
+      delegate_to: localhost
+      run_once: true
+      register: service_token
+      uri:
+        method: POST
+        url: https://kibana.local:5601/api/fleet/service_tokens
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+        return_content: true
+
+    # various methods to show the service token
+    - name: Show Service Token - Method 1
+      delegate_to: fleet
+      run_once: true
+      register: st
+      debug:
+        var: (service_token.content|from_json).value
+
+    - name: Show Service Token - Method 2
+      delegate_to: fleet
+      run_once: true
+      debug:
+        msg: "{{ (service_token.content|from_json).value }}"
+
+    - name: Show Service Token - Method 3
+      delegate_to: fleet
+      run_once: true
+      debug:
+        msg: "{{ st }}"
+
+    - name: Copy Elastic Agent to Remote
+      copy:
+        src: "files/{{ elasticagent_package }}"
+        dest: /tmp/
+
+    - name: Create /tmp/ea/
+      file:
+        path: /tmp/ea/
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Extract Tarball
+      unarchive:
+        remote_src: yes
+        src: "/tmp/{{ elasticagent_package }}"
+        dest: /tmp/ea
+        owner: root
+        group: root
+        mode: 0700
+        extra_opts:
+        - --strip
+        - 1
+
+    # these settings share many of the same values, but they serve different purposes
+    #     - to act as the fleet server
+    #     - to talk to the fleet server (in this case, itself)
+    - name: Install Elastic Agent with Server Policy
+      shell: >
+        /tmp/ea/elastic-agent install \
+        --force \
+        --url=https://fleet.local:8220 \
+        --fleet-server-es="https://{{ elastic_testnode }}:9200" \
+        --fleet-server-service-token="{{ (service_token.content|from_json).value }}" \
+        --fleet-server-policy=fleet-server-policy \
+        --certificate-authorities=/opt/Elastic/Agent/certs/ca-chain.cert.pem \
+        --fleet-server-es-ca=/opt/Elastic/Agent/certs/ca-chain.cert.pem \
+        --fleet-server-cert=/opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem \
+        --fleet-server-cert-key=/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem \
+        --fleet-server-port=8220
+      args:
+        chdir: /root
+
+    - name: Delete Elastic Agent Tarball
+      file:
+        path: "/tmp/{{ elasticagent_package }}"
+        state: absent
+
+    - name: Delete Elastic Agent Installer Files
+      file:
+        path: /tmp/ea
+        state: absent

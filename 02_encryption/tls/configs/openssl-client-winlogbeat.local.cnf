@@ -1,0 +1,30 @@
+###############################################################
+[ req ]
+prompt             = no
+default_bits       = 4096
+default_md         = sha512
+default_keyfile    = tls/keys/winlogbeat.local.client.key.pem
+distinguished_name = client_distinguished_name
+req_extensions     = client_cert
+
+###############################################################
+[ client_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = MO
+localityName                = St. Louis
+organizationName            = Business, Inc.
+organizationalUnitName      = Information Technology
+commonName                  = Winlogbeat Client
+emailAddress                = none@localhost
+
+###############################################################
+[ client_cert ]
+nsComment              = OpenSSL Certificate for Clients
+subjectAltName         = @alternate_names
+
+###############################################################
+[ alternate_names ]
+DNS.1  = winlogbeat
+DNS.2  = winlogbeat.local
+# DO NOT INCLUDE IP ADDRESSES IN SAN
+#IP.1  = 192.168.8.133

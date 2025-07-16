@@ -1,0 +1,18 @@
+# remove delegate options and __<hostname> to publish the generated config files to each remote host
+- name: Generate and Copy client-ssl.properties to Remote
+  # comment out "delegate_to" to make this copy LOCAL "src" to the REMOTE "dest"
+  delegate_to: localhost
+  template:
+    src: templates/client-ssl.properties.j2
+    # remove __{{hostname...domain}} portion if removing "delegate_to"
+    dest: "output/client-ssl.properties__{{ hostvars[inventory_hostname].basename }}{{ domain }}"
+
+# remove delegate_to and __<hostname>, so you'll affect remote files
+- name: Remote Double Quotes in server.properties
+  # comment out "delegate_to" to make this copy LOCAL "src" to the REMOTE "dest"
+  delegate_to: localhost
+  replace:
+    # remove __{{hostname...domain}} portion if removing "delegate_to"
+    path: "output/client-ssl.properties__{{ hostvars[inventory_hostname].basename }}{{ domain }}"
+    regexp: '\"'
+    replace: ""

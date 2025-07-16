@@ -1,0 +1,15 @@
+# Create Directories for TLS Files
+
+- name: Create TLS Required Local Directories
+  delegate_to: localhost
+  run_once: true
+  file:
+    state: directory
+    path: "{{ item }}"
+  loop:
+    - tls/caroot
+    - tls/caintermediate
+    - tls/certs
+    - tls/keys
+    - tls/csr
+    - tls/configs

@@ -1,0 +1,428 @@
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#
+# Redis
+#
+# BY DEFAULT, REDIS LISTENS ON ALL INTERFACES
+# USE bind TO CHANGE THIS BEHAVIOR
+#
+#//////////////////////////////////
+
+
+#===========================
+#
+# Preparation
+#
+#===========================
+
+
+# on the VM with your TLS files, located just above the tls directory
+# examples below use 192.168.8.133
+python3 -m http.server 8080
+
+
+# generate Redis password
+openssl rand 50 | openssl base64 -A
+	ZtyziOSFGAcbGy807nY6Ap21Qd42SJa7Uthsfly9S1LbvflkevvDvTGRBC69qatZGQo=
+
+
+
+#===========================
+#
+# ALL HOSTS
+# /etc/hosts
+#
+#===========================
+
+
+#-------------
+# update etc hosts
+192.168.8.130   threatintel
+192.168.8.130   threatintel.local
+192.168.8.137   logstash01
+192.168.8.137   logstash01.local
+192.168.8.136   logstash02
+192.168.8.136   logstash02.local
+
+
+#-------------
+# install software
+# CTI nodes
+sudo apt install filebeat logstash redis-server -y
+# data nodes
+sudo apt install filebeat logstash redis-server memcached -y
+# RHEL use yum or dnf instead of apt, and redis instead of redis-server
+
+
+#-------------
+# create new group for TLS files
+sudo groupadd bookproject
+for i in {j,logstash,redis,memcache}; do sudo usermod -aG bookproject $i; done
+exit
+# log back in
+# or use exec to load a session in the same terminal
+exec su -l j
+id
+#...1001(bookproject)
+
+
+#-------------
+# on host with TLS files - start Python webserver
+python3 -m http.server 8080
+
+
+#-------------
+# on each host
+# make TLS directory
+sudo mkdir -p /etc/ssl/bookproject
+sudo chmod 0775 /etc/ssl/bookproject
+sudo chown root:bookproject /etc/ssl/bookproject
+cd /etc/ssl/bookproject
+# download files
+wget 192.168.8.133:8080/tls/certs/ca-chain.cert.pem && \
+wget 192.168.8.133:8080/tls/certs/wildcard.local.flex.cert.pem && \
+wget 192.168.8.133:8080/tls/keys/wildcard.local.flex.key.pem && \
+wget 192.168.8.133:8080/tls/keys/wildcard.local.flex.key.nopass.pem
+
+#-------------
+# change file permissions
+sudo chmod 0640 *
+sudo chown root:bookproject *
+# check permissions
+cat ca-chain.cert.pem
+
+#-------------
+# OPTIONAL - UBUNTU - add ca-chain.cert.pem to operating system's trusted certificates
+# must have .crt extension
+sudo cp ca-chain.cert.pem /usr/local/share/ca-certificates/ca-chain.crt
+sudo update-ca-certificates
+# creates a symlink /etc/ssl/certs/ca-chain.pem --> /usr/local/share/ca-certificates/ca-chain.crt
+
+#-------------
+# OPTIONAL - RedHat - add ca-chain.cert.pem to operating system's trusted certificates
+sudo cp ca-chain.cert.pem /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust
+
+
+
+#===========================
+#
+# Redis Install and Configuration
+#
+#===========================
+
+
+#-------------
+# installation
+sudo apt update
+sudo apt install redis-server -y
+
+#-------------
+# backup original config
+sudo cp /etc/redis/redis.conf /etc/redis/redis.conf.original
+sudo nano /etc/redis/redis.conf
+
+#-------------
+# generate authentication password
+openssl rand 50 | openssl base64 -A
+	ZtyziOSFGAcbGy807nY6Ap21Qd42SJa7Uthsfly9S1LbvflkevvDvTGRBC69qatZGQo=
+
+#-------------
+# modify the config
+sudo nano /etc/redis/redis.conf
+#######
+# bind Redis only to localhost (uncomment this line)
+# omit ::1 to only use IPv4
+bind 127.0.0.1 ::1
+# change "supervised no" to systemd
+supervised systemd
+# set password for the "default" system user
+# change "requirepass foobared" to below
+requirepass ZtyziOSFGAcbGy807nY6Ap21Qd42SJa7Uthsfly9S1LbvflkevvDvTGRBC69qatZGQo=
+
+# create Unix socket
+unixsocket /var/run/redis/redis-server.sock
+# set socket permissions - Unix sockets MUST have read-write access for any intended users
+unixsocketperm 0666
+	# OPTIONALLY disable all TCP and only use Unix sockets
+	# don't indent this line
+	port 0
+#######
+
+
+#-------------
+# (re)start Redis
+sudo systemctl restart redis
+# check IP binding
+sudo ss -lnp | grep redis
+
+# periodic snapshots saved to /var/lib/redis/dump.rdb
+# change RDB snapshotting using "save" options, already enabled with defaults
+
+
+
+#===========================
+#
+# Redis Commands
+#
+#===========================
+
+
+#-------------
+# connect to CLI and authenticate as "default" ACL user
+redis-cli
+auth default ZtyziOSFGAcbGy807nY6Ap21Qd42SJa7Uthsfly9S1LbvflkevvDvTGRBC69qatZGQo=
+
+#-------------
+# connecting using TLS on localhost
+redis-cli -h 127.0.0.1 -p 6379 --tls \
+--cert /etc/ssl/bookproject/wildcard.local.flex.cert.pem \
+--key /etc/ssl/bookproject/wildcard.local.flex.key.nopass.pem \
+--cacert /etc/ssl/bookproject/ca-chain.cert.pem
+
+#-------------
+# connecting using the Unix socket
+redis-cli -s /var/run/redis/redis-server.sock
+
+#-------------
+# test cli
+ping
+	PONG
+
+#-------------
+# set a key
+set abcd 1234
+# set a key with 5 second time-to-live (TTL)
+set abcd EX 5
+
+#-------------
+# get a key's value
+get abcd
+	1234
+
+#-------------
+# view usage, memory, keyspace, database size
+info
+info memory
+# keys on followers will show avg_ttl=0 because they get directives from the leader instance
+info keyspace
+dbsize
+
+#-------------
+# view available keys (not in book, this isn't recommended as it iterates over ALL keys and will take a long time)
+keys *
+
+#-------------
+# select database if other than 0
+# the creator of Redis doesn't recommend using mulitple databases
+select 1
+
+
+
+#===========================
+#
+# Redis ACLs
+# run commands in the Redis CLI
+#
+#===========================
+
+
+#-------------
+# create two users, one that only sets keys, and one that only gets keys
+# both have the password abcd1234
+acl setuser setonly on allkeys +set >abcd1234
+acl setuser getonly on allkeys +get >abcd1234
+# log out from default or admin users
+
+#-------------
+# test commands
+auth setonly abcd1234
+	OK
+set wxyz 5678
+	OK
+get wxyz
+	(error) NOPERM this user has no permissions to run the 'get' command or its subcommand
+
+# utilize users like this with Logstash+Ruby to limit what Logstash can do
+
+
+
+#===========================
+#
+# Redis Benchmarking
+#
+#===========================
+
+
+#-------------
+redis-benchmark \
+-s /var/run/redis/redis-server.sock \
+-t get \
+-n 1000000 \
+-d 100 \
+-c 1 \
+-a ZtyziOSFGAcbGy807nY6Ap21Qd42SJa7Uthsfly9S1LbvflkevvDvTGRBC69qatZGQo=
+
+# -s = socket
+# -t = method
+# -n = number operations
+# -d = bytes to send
+# -c 1 = connections
+# -a = requirepass string
+
+
+
+#===========================
+#
+# Memcached Install and Configuration
+#
+#===========================
+
+
+#-------------
+# installation
+sudo apt install memcached -y
+
+#-------------
+# config - Ubuntu
+sudo nano /etc/memcached.conf
+#######
+--snip--
+-l 127.0.0.1
+-U 0
+--snip--
+-m 128
+#######
+
+#-------------
+# config - RHEL and similar
+sudo vi /etc/sysconfig/memcached
+#######
+PORT="11211"
+USER="memcached"
+MAXCONN="1024"
+CACHESIZE="64"
+OPTIONS="-l 127.0.0.1"
+#######
+
+#-------------
+systemctl restart memcached
+systemctl status memcached
+systemctl enable memcached
+
+
+
+#===========================
+#
+# Memcached Commands
+#
+#===========================
+
+
+#-------------
+# connect
+telnet localhost 11211
+
+#-------------
+# setting values
+# set VALUE FLAGS(INT) TTL(SECONDS,INT) BYTES(INT)
+set abcd 0 30 4
+1234
+> STORED
+# STORED indicates success
+
+#-------------
+# retrieve a value
+get abcd
+> VALUE abcd 0 4
+> 1234
+> END
+
+#-------------
+# disconnect
+CTRL+]
+
+
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#
+# Miscellaneous
+#
+#//////////////////////////////////
+
+
+#===========================
+#
+# Ansible and Redis
+#
+#===========================
+
+
+# add to vars.yml
+redis:
+  master: 192.168.8.130
+
+
+# Ansible Tasks to Create Redis Password as Variable (Fact), Log to Local File
+# allows password to be used in templates
+
+- name: Create Redis Password
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    redis_requirepass: "{{ lookup('password', '/dev/null chars=hexdigits length=64') }}"
+
+- name: Print Facts - Redis Password
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.debug:
+    var: redis_requirepass
+
+- name: Save Redis Password - Write Password
+  local_action:
+    module: ansible.builtin.blockinfile
+    marker: ""
+    path: output/redis_requirepass.txt
+    mode: 0600
+    create: true
+    block: |
+      {{ '%Y-%m-%d %H:%M:%S %z' | strftime }}
+      {{ redis_requirepass }}
+
+
+#===========================
+# Quick Docker Container for Easy Testing
+#===========================
+
+# Unencrypted Docker container
+docker run -p 6379:6379 -it redis/redis-stack:latest
+
+
+#===========================
+# Python and Redis
+# https://university.redis.io/course/g0ucycrhulgl8e?tab=details
+# https://www.datacamp.com/tutorial/python-redis-beginner-guide
+# https://realpython.com/python-redis/
+#===========================
+
+#--------------------
+# Install pip Module
+#--------------------
+
+python3 -m pip install redis
+
+
+#--------------------
+# Example Script
+# module has many powerful, flexible options
+#--------------------
+
+import redis
+r = redis.Redis(host='localhost', port=6379, db=0)
+# set and get a key
+r.set('foo', 'bar')
+r.get('foo')
+# list convention is push from right, pop from left
+r.rpush('test', '1')
+r.rpush('test', '2')
+r.lpop('test') # b'1'
+r.lpop('test').decode() # '2'

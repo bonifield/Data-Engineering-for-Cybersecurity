@@ -1,0 +1,3 @@
+{
+  "fleet_server_hosts" : [ "https://fleet.local:8220/" ]
+}

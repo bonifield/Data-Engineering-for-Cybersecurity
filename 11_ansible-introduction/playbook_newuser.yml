@@ -1,0 +1,33 @@
+#
+# ansible-playbook --ask-vault-pass --ask-become-pass -i inventory.yml playbook_newuser.yml
+#
+
+- hosts: all
+  become: yes
+  #gather_facts: yes
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+#  vars_prompt:
+#    - name: "user_password"
+#      prompt: "Enter a password for the new user"
+#      private: no
+#      encrypt: sha512_crypt
+#      confirm: yes
+#      salt_size: 7
+
+  tasks:
+
+    # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html
+    - name: Create User and Set Password
+      user:
+        name: "{{ user }}"
+        #password: "{{ user_password | password_hash('sha512') }}"
+        password: "{{ user_password }}"
+        home: "/home/{{ user }}"
+        shell: /bin/bash
+
+#    - name: Create User and Set Password
+#      ansible.builtin.include_tasks:
+#        file: tasks/newuser.yml

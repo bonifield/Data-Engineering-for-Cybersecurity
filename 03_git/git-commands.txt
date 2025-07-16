@@ -1,0 +1,44 @@
+#===========================
+# Git commands
+#===========================
+
+git fetch
+git status
+git pull
+
+git checkout dev
+# make some changes
+git status
+git add .
+git commit -a -m "made changes to xyz"
+git push
+
+# merge dev into main and push
+git checkout main
+git merge dev
+git push
+# switch back to dev!
+git checkout dev
+
+# stashing
+# make changes, then track them
+touch abcd.txt
+git add .
+# stash the tracked files
+git stash
+# do other things, then restore your files
+git stash pop
+
+
+#===========================
+# aliases
+#===========================
+
+alias gfs='git fetch && git status'
+alias gp='git pull'
+alias ga='git add . && git status'
+alias gs='git status'
+alias gc='git commit -am '
+alias gac='git add . && git commit -am '
+alias gmergeintomainandpush='git checkout main && git merge dev && git push && git checkout dev'
+alias gl="git log --oneline"

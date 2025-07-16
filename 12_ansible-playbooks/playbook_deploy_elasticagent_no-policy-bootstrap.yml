@@ -1,0 +1,123 @@
+#
+#   run the playbook from the top level of the role directory
+#       ansible-playbook -JKi inventory-elastic.yml playbook_deploy_elasticagent.yml
+#
+# https://www.elastic.co/guide/en/fleet/current/fleet-apis.html
+#
+
+- hosts: elasticagent
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+    - name: Create /opt/Elastic/Agent/certs/
+      file:
+        path: /opt/Elastic/Agent/certs/
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+      # included for reference
+#      when:
+#        ansible_facts['distribution'] == "Ubuntu"
+
+    - name: Copy CA Chain PEM to Remote
+      copy:
+        src: "tls/certs/ca-chain.cert.pem"
+        dest: "/opt/Elastic/Agent/certs/"
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Copy Fleet TLS Key to Remote
+      copy:
+        #src: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.nopass.pem"
+        src: tls/keys/wildcard.local.flex.key.nopass.pem
+        dest: /opt/Elastic/Agent/certs/
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Copy Fleet TLS Certificate to Remote
+      copy:
+        # example of using the hostname+your certificate naming convention, instead of the wildcard
+        #src: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+        src: tls/certs/wildcard.local.flex.cert.pem
+        dest: /opt/Elastic/Agent/certs/
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Copy Elastic Agent to Remote
+      copy:
+        src: "files/{{ elasticagent_package }}"
+        dest: /tmp/
+
+    - name: Create /tmp/ea/
+      file:
+        path: /tmp/ea/
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Extract Tarball
+      unarchive:
+        remote_src: yes
+        src: "/tmp/{{ elasticagent_package }}"
+        dest: /tmp/ea
+        owner: root
+        group: root
+        mode: 0700
+        extra_opts:
+        - --strip
+        - 1
+
+    - name: Create Enrollment Token for Elastic Agent Connection to Kibana (POST)
+      delegate_to: localhost
+      run_once: true
+      register: enrollment_token
+      uri:
+        method: POST
+        url: https://kibana.local:5601/api/fleet/enrollment_api_keys
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{ lookup('file','files/fleet_agent_get_enrollment_api_keys.json') | to_json }}"
+
+    # could also write this to a file, send to a credential store, etc
+    - name: Show Enrollment Token
+      delegate_to: fleet
+      run_once: true
+      debug:
+        msg: "{{ (enrollment_token.content|from_json).item.api_key }}"
+
+    - name: Install Elastic Agent with Server Policy
+      shell: >
+        /tmp/ea/elastic-agent install
+        --force
+        --url=https://fleet.local:8220
+        --enrollment-token="{{ (enrollment_token.content|from_json).item.api_key }}"
+        --certificate-authorities=/opt/Elastic/Agent/certs/ca-chain.cert.pem
+      args:
+        chdir: /root
+
+    - name: Delete Elastic Agent Tarball
+      file:
+        path: "/tmp/{{ elasticagent_package }}"
+        state: absent
+
+    - name: Delete Elastic Agent Installer Files
+      file:
+        path: /tmp/ea
+        state: absent

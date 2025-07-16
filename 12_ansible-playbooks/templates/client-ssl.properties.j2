@@ -1,0 +1,8 @@
+bootstrap.servers={% for node in groups['kafka'] %}{% if loop.last %}{{ hostvars[node].basename }}{{ domain }}:{{ ports.ssl }}
+{% else %}{{ hostvars[node].basename }}{{ domain }}:{{ ports.ssl }},{% endif %}{% endfor %}
+security.protocol=SSL
+ssl.keystore.location="{{ directories.kafka.certs }}{{ hostvars[inventory_hostname].basename }}{{ domain }}.keystore.jks"
+ssl.keystore.password="{{ keystore_password }}"
+ssl.key.password="{{ ssl_key_password }}"
+ssl.truststore.location="{{ directories.kafka.certs }}truststore.jks"
+ssl.truststore.password="{{ truststore_password }}"

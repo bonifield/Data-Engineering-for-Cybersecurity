@@ -1,0 +1,19 @@
+all:
+  children:
+    kafka:
+      hosts:
+        kafka01:
+          ansible_host: 192.168.8.30
+          basename: kafka01
+          hostname: kafka01.local
+          broker_id: 211
+        kafka02:
+          ansible_host: 192.168.8.31
+          basename: kafka02
+          hostname: kafka02.local
+          broker_id: 212
+        kafka03:
+          ansible_host: 192.168.8.32
+          basename: kafka03
+          hostname: kafka03.local
+          broker_id: 213

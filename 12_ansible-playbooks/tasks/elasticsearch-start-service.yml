@@ -1,0 +1,9 @@
+- name: Start Elasticsearch Service
+  # IF ONLY RUNNING A SINGLE NODE
+  #delegate_to: "{{ elastic_testnode }}"
+  #run_once: true
+  systemd_service:
+    name: elasticsearch
+    daemon_reload: true
+    state: restarted
+    enabled: true

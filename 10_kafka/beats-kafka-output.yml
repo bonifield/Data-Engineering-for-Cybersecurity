@@ -1,0 +1,25 @@
+# filebeat.yml
+
+# filebeat modules enable system
+# enabled both settings in modules.d/system.yml
+
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: true
+  reload.period: 3s
+
+output.kafka:
+  enabled: true
+  # hosts only gets cluster metadata; Kafka tells Filebeat where to send data
+  hosts: [ "kafka01.local:9094", "kafka02.local:9094" ]
+  topic: "filebeat"
+  ssl.enabled: true
+  ssl.verification_mode: full
+  ssl.certificate: "/etc/ssl/elastic/filebeat.local.flex.cert.pem"
+  ssl.key: "/etc/ssl/elastic/filebeat.local.flex.key.pem"
+  ssl.key_passphrase: "abcd1234"
+  ssl.certificate_authorities:
+    - /etc/ssl/elastic/ca-chain.cert.pem
+
+# example tag
+tags: ["filebeat-to-kafka"]

@@ -1,0 +1,2 @@
+# add to packetbeat.yml
+packetbeat.procs.enabled: true

@@ -1,0 +1,16 @@
+- name: Install Kibana
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - kibana
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Generate kibana.yml
+  template:
+    src: templates/kibana.yml.j2
+    dest: /etc/kibana/kibana.yml
+  when:
+    ansible_facts['distribution'] == "Ubuntu"

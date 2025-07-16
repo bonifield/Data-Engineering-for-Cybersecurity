@@ -1,0 +1,24 @@
+# MANUALLY download a GPG key using "get_url"
+# note module name is "uri" NOT "url"
+
+# see also ansible.builtin.apt_key and ansible.builtin.rpm_key
+
+- name: Fetch GPG Key
+  get_url:
+    url: https://url/SOME-GPG-KEY.gpg
+    dest: /tmp/SOME-GPG-KEY.gpg
+
+# if key is ASCII (deprecated) and /usr/share/keyrings/ does not exist
+- name: Fetch GPG Key
+  get_url:
+    url: https://url/SOME-GPG-KEY.asc
+    dest: /tmp/SOME-GPG-KEY.asc
+
+- name: Create /usr/share/keyrings/
+  file:
+    path: /usr/share/keyrings/
+    state: directory
+    mode: '0755'
+
+- name: Dearmor GPG Key
+  command: gpg --dearmor -o /usr/share/keyrings/some-keyring.gpg /tmp/GPG-KEY.asc

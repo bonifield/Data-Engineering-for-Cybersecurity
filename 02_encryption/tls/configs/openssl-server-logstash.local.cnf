@@ -1,0 +1,30 @@
+###############################################################
+[ req ]
+prompt             = no
+default_bits       = 4096
+default_md         = sha512
+default_keyfile    = tls/keys/logstash.local.server.key.pem
+distinguished_name = server_distinguished_name
+req_extensions     = server_cert
+
+###############################################################
+[ server_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = MO
+localityName                = St. Louis
+organizationName            = Business, Inc.
+organizationalUnitName      = Information Technology
+commonName                  = Logstash Server
+emailAddress                = none@localhost
+
+###############################################################
+[ server_cert ]
+nsComment              = OpenSSL Certificate for Servers
+subjectAltName         = @alternate_names
+
+###############################################################
+[ alternate_names ]
+DNS.1  = logstash
+DNS.2  = logstash.local
+# DO NOT INCLUDE IP ADDRESSES IN SAN
+#IP.1  = 192.168.8.133

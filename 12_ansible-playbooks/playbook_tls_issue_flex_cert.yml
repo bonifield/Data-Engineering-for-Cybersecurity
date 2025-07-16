@@ -1,0 +1,29 @@
+#
+# creates new flex cert/key pairs, P12, and JKS files for new hosts in the oneshot inventory
+#
+# ansible-playbook -Ji inventory-oneshot.yml playbook_tls_issue_flex_cert.yml
+#
+
+- hosts: all
+  become: no
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+    # Generate Flex Private Keys, CSRs, and Signed Certificates
+    - name: Generate Flex Certificate
+      include_tasks:
+        file: tasks/tls-cert-flex.yml
+
+    # Container Files - PKCS12/PFX
+    - name: Create PKCS12/PFX Container Files
+      include_tasks:
+        file: tasks/tls-pkcs12.yml
+
+    # Container Files - JKS
+    - name: Create JKS Container Files
+      include_tasks:
+        file: tasks/tls-jks.yml

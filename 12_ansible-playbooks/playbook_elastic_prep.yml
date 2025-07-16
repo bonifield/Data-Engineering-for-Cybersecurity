@@ -1,0 +1,26 @@
+#
+# ansible-playbook -JKi inventory-elastic.yml playbook_elastic_prep.yml
+#
+
+- hosts: elastic_servers
+#- hosts: elastic
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+    - name: Configure /etc/hosts
+      include_tasks:
+        file: tasks/etchosts-all.yml
+        #file: tasks/etchosts-play.yml
+
+    - name: Create Elastic Firewall Rules
+      include_tasks:
+        file: tasks/elastic-firewall-rules.yml
+
+    - name: Configure Elastic GPG Key and Repository
+      include_tasks:
+        file: tasks/elastic-repository.yml

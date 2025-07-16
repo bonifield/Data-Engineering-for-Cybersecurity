@@ -1,0 +1,51 @@
+# Private Key
+
+- name: Generate Intermediate CA 4096-bit Private Key
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_privatekey:
+    path: "tls/caintermediate/ca-int.key"
+    passphrase: "{{ ssl_key_password }}"
+    type: RSA
+    size: 4096
+    cipher: auto
+
+# CSR
+
+- name: Generate Intermediate CA CSR
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_csr:
+    path: "tls/caintermediate/ca-int.csr"
+    privatekey_path: "tls/caintermediate/ca-int.key"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    digest: sha512
+    country_name: US
+    state_or_province_name: MO
+    locality_name: St. Louis
+    organization_name: Business, Inc.
+    organizational_unit_name: Information Technology
+    common_name: "Intermediate CA"
+    email_address: none@localhost
+    basicConstraints:
+      - "CA:TRUE"
+      - "pathlen:0"
+    key_usage_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+
+# Sign CSR
+
+- name: Generate Intermediate CA Signed Certificate
+  delegate_to: localhost
+  run_once: true
+  community.crypto.x509_certificate:
+    path: tls/caintermediate/ca-int.cert.pem
+    csr_path: "tls/caintermediate/ca-int.csr"
+    ownca_path: tls/caroot/ca.cert.pem
+    ownca_privatekey_path: tls/caroot/ca.key
+    ownca_privatekey_passphrase: "{{ ssl_key_password }}"
+    ownca_not_after: "+3650d"
+    ownca_digest: sha512
+    provider: ownca

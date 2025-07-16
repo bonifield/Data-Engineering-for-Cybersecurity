@@ -1,0 +1,37 @@
+# hostname and basename are contrived examples in lieu of dynamic inventories or pulling DNS entries
+
+# add hosts here to run "bring up to speed" playbooks or execute bulk tasks, instead of handjamming adhoc tasks
+
+all:
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  children:
+
+    elasticagent:
+#    tools:
+
+      vars:
+        # plenty of variables, just in case
+        requires_pkcs12: yes
+        requires_jks: yes
+        requires_pkcs8: yes
+        requires_client_cert: yes
+        requires_server_cert: yes
+        requires_flex_cert: yes
+
+      hosts:
+        # various hosts for one-off endeavors
+        elasticsearch01:
+          ansible_host: 192.168.8.130
+          hostname: elasticsearch01.local
+          basename: elasticsearch01
+#        minio:
+#          ansible_host: 192.168.8.133
+#          hostname: minio.local
+#          basename: minio
+#        logstash99:
+#          ansible_host: 192.168.8.133
+#          hostname: logstash99.local
+#          basename: logstash99

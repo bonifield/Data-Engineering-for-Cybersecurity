@@ -1,0 +1,34 @@
+#
+# ansible-playbook playbook_basicauth.yml
+#
+
+- hosts: localhost
+  become: no
+  gather_facts: no
+
+  tasks:
+
+    - name: Update Fleet Default Outputs and TLS Filepaths (POST)
+      delegate_to: localhost
+      run_once: true
+      uri:
+        method: POST
+        #url: https://kibana.local:5601/api/fleet/outputs
+        url: https://127.0.0.1:5000/api/fleet/outputs
+        force_basic_auth: true
+        user: elastic
+        password: abcd1234
+        validate_certs: false
+        #ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+           kbn-xsrf: reporting
+           Content-Type: application/json
+        return_content: true
+        body_format: json
+        body: "{{lookup('file','files/fleet_output_elasticsearch.json') | to_json}}"
+      register: api_output
+
+    - name: Show Results
+      debug:
+        var: api_output.content|from_json
+

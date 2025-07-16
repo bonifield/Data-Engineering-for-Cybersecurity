@@ -1,0 +1,68 @@
+###############################################################
+[ req ]
+prompt             = no
+default_bits       = 4096
+default_md         = sha512
+default_keyfile    = tls/keys/wildcard.local.flex.key.pem
+distinguished_name = flex_distinguished_name
+req_extensions     = flex_cert
+
+###############################################################
+[ flex_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = MO
+localityName                = St. Louis
+organizationName            = Business, Inc.
+organizationalUnitName      = Information Technology
+commonName                  = Wildcard and Multiple Hostnames Flex
+emailAddress                = none@localhost
+
+###############################################################
+[ flex_cert ]
+nsComment              = OpenSSL Wildcard Certificate for Clients or Servers
+subjectAltName         = @alternate_names
+
+###############################################################
+[ alternate_names ]
+DNS.1  = *.local
+DNS.2  = filebeat.local
+DNS.3  = winlogbeat.local
+DNS.4  = packetbeat.local
+DNS.5  = logstash.local
+DNS.6  = logstash01.local
+DNS.7  = logstash02.local
+DNS.8  = logstash03.local
+DNS.9  = rsyslog.local
+DNS.10  = elasticsearch.local
+DNS.11  = elasticsearch01.local
+DNS.12  = elasticsearch02.local
+DNS.13  = elasticsearch03.local
+DNS.14  = kafka.local
+DNS.15  = kafka01.local
+DNS.16  = kafka02.local
+DNS.17  = kafka03.local
+DNS.18  = kibana.local
+DNS.19  = fleet.local
+DNS.20  = elasticagent.local
+DNS.21  = filebeat
+DNS.22  = winlogbeat
+DNS.23  = packetbeat
+DNS.24  = logstash
+DNS.25  = logstash01
+DNS.26  = logstash02
+DNS.27  = logstash03
+DNS.28  = rsyslog
+DNS.29  = elasticsearch
+DNS.30  = elasticsearch01
+DNS.31  = elasticsearch02
+DNS.32  = elasticsearch03
+DNS.33  = kafka
+DNS.34  = kafka01
+DNS.35  = kafka02
+DNS.36  = kafka03
+DNS.37  = kibana
+DNS.38  = fleet
+DNS.39  = elasticagent
+DNS.40  = minio
+DNS.41  = minio.local
+DNS.42  = localhost

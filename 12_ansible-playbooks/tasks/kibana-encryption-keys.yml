@@ -1,0 +1,11 @@
+#- name: Generate Kibana Encryption Keys
+#  command: /usr/share/kibana/bin/kibana-encryption-keys generate
+
+- name: Generate and Append Kibana Encryption Keys to kibana.yml
+  blockinfile:
+    state: present
+    path: /etc/kibana/kibana.yml
+    block: |
+      xpack.encryptedSavedObjects.encryptionKey: "{{ lookup('password', '/dev/null chars=hexdigits length=32') }}"
+      xpack.reporting.encryptionKey: "{{ lookup('password', '/dev/null chars=hexdigits length=32') }}"
+      xpack.security.encryptionKey: "{{ lookup('password', '/dev/null chars=hexdigits length=32') }}"

@@ -1,0 +1,44 @@
+#
+# ansible-playbook -JKi inventory-elastic.yml playbook_elasticsearch.yml
+#
+
+- hosts: elasticsearch
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+    - name: Install Elasticsearch
+      include_tasks:
+        file: tasks/elasticsearch-install.yml
+
+    - name: Configure Elasticsearch Keystores
+      include_tasks:
+        file: tasks/elasticsearch-keystores.yml
+
+#    - name: Write Seed Hosts
+#      include_tasks:
+#        file: tasks/elasticsearch-seed-hosts.yml
+
+    - name: Configure Elasticsearch Memory Lock
+      include_tasks:
+        file: tasks/elasticsearch-memorylock.yml
+
+    - name: Timeout Warning
+      debug:
+        msg: "Elasticsearch may take longer to start, than Ansible's systemd_server module will wait, causing an error even if the service starts successfully. Try commenting the above tasks, or splitting the playbook into two pieces."
+
+    - name: Start Elasticsearch Service
+      include_tasks:
+        file: tasks/elasticsearch-start-service.yml
+
+    - name: Change Elastic Passwords
+      include_tasks:
+        file: tasks/elasticsearch-user-passwords.yml
+
+    - name: Get Elasticsearch Status
+      include_tasks:
+        file: tasks/elasticsearch-get-status.yml

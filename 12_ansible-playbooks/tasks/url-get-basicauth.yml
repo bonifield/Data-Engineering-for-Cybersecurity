@@ -1,0 +1,9 @@
+# note module name is "uri" NOT "url"
+- name: Get Status From Basic Authentication API
+  uri:
+    method: GET
+    force_basic_auth: true
+    url: "https://{{ url }}:8080/{{ api }}"
+    user: bob
+    password: "{{ bob_password }}"
+    ca_path: /tmp/ca.pem

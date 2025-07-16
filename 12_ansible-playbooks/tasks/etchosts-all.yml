@@ -1,0 +1,10 @@
+- name: Add All Hosts to /etc/hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {% for item in groups['all'] %}
+      {{ hostvars[item].ansible_host }}   {{ hostvars[item].hostname }}
+      {% endfor %}
+      {% for item in groups['all'] %}
+      {{ hostvars[item].ansible_host }}   {{ hostvars[item].basename }}
+      {% endfor %}

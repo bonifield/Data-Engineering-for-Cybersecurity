@@ -1,0 +1,39 @@
+- name: Create /etc/kibana/certs/
+  file:
+    path: "/etc/kibana/certs/"
+    state: directory
+    owner: root
+    group: kibana
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Copy CA Chain PEM to Remote
+  copy:
+    src: "tls/certs/ca-chain.cert.pem"
+    dest: "/etc/kibana/certs/"
+    owner: root
+    group: kibana
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Copy Kibana TLS Key to Remote
+  copy:
+    src: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    dest: "/etc/kibana/certs/"
+    owner: root
+    group: kibana
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Copy Kibana TLS Certificate to Remote
+  copy:
+    src: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+    dest: "/etc/kibana/certs/"
+    owner: root
+    group: kibana
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"

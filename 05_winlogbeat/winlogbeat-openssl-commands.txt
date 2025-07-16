@@ -1,0 +1,42 @@
+#===========================
+# Winlogbeat Client Certificate
+# can only initiate connections
+#===========================
+
+echo "Creating the Winlogbeat Client Certificate"
+
+# create Winlogbeat client configuration in tls/configs/openssl-client-winlogbeat.local.cnf
+
+# create the private key and CSR
+openssl req -config tls/configs/openssl-client-winlogbeat.local.cnf -new -out tls/csr/winlogbeat.local.client.csr -outform PEM -passout pass:abcd1234
+
+# sign the CSR using the Intermediate CA
+openssl ca -batch -notext -config tls/configs/openssl-intermediateca.cnf -passin pass:abcd1234 -policy signing_policy -extensions client_cert -out tls/certs/winlogbeat.local.client.cert.pem -infiles tls/csr/winlogbeat.local.client.csr
+
+# view the signed cert
+openssl x509 -text -noout -in tls/certs/winlogbeat.local.client.cert.pem
+
+# verify the signed cert
+openssl verify -CAfile tls/certs/ca-chain.cert.pem tls/certs/winlogbeat.local.client.cert.pem
+
+
+#===========================
+# Winlogbeat Flex Certificate
+# can initiate and receive connections (unnecessary)
+#===========================
+
+echo "Creating the Winlogbeat Flex Certificate"
+
+# create Winlogbeat flex configuration in tls/configs/openssl-flex-winlogbeat.local.cnf
+
+# create the private key and CSR
+openssl req -config tls/configs/openssl-flex-winlogbeat.local.cnf -new -out tls/csr/winlogbeat.local.flex.csr -outform PEM -passout pass:abcd1234
+
+# sign the CSR using the Intermediate CA
+openssl ca -batch -notext -config tls/configs/openssl-intermediateca.cnf -passin pass:abcd1234 -policy signing_policy -extensions flex_cert -out tls/certs/winlogbeat.local.flex.cert.pem -infiles tls/csr/winlogbeat.local.flex.csr
+
+# view the signed cert
+openssl x509 -text -noout -in tls/certs/winlogbeat.local.flex.cert.pem
+
+# verify the signed cert
+openssl verify -CAfile tls/certs/ca-chain.cert.pem tls/certs/winlogbeat.local.flex.cert.pem

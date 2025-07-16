@@ -1,0 +1,12 @@
+# Create Java KeyStore (JKS) Container
+
+- name: Generate Java KeyStore (JKS) Container File
+  delegate_to: localhost
+  when: hostvars[inventory_hostname].requires_jks
+  community.general.java_keystore:
+    name: "{{ hostvars[inventory_hostname].hostname }}"
+    dest: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.jks"
+    certificate_path: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+    private_key_path: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    private_key_passphrase: "{{ ssl_key_password }}"
+    password: "{{ ssl_key_password }}"

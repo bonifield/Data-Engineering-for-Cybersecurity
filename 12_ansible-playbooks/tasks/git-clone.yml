@@ -1,0 +1,6 @@
+- name: Git Clone
+  ansible.builtin.git:
+    repo: "https://github.com/swisskyrepo/PayloadsAllTheThings.git"
+    dest: tools/PayloadAllTheThings/
+    #update: true
+    force: true

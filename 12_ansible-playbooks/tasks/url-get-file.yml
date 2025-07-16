@@ -1,0 +1,4 @@
+- name: Fetch Web File
+  get_url:
+    url: "{{ url }}"
+    dest: /tmp/

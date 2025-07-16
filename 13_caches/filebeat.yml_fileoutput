@@ -1,0 +1,22 @@
+# ./filebeat modules enable threatintel
+#	enable providers in modules.d/threatintel.yml
+# ./filebeat modules disable system
+# jq '.["message"]|fromjson' /var/log/filebeat/threatintel*ndjson
+
+# change umask for Filebeat
+# sudo nano /lib/systemd/system/filebeat.service
+#######
+# CHANGE: UMask=022
+#######
+# sudo systemctl daemon-reload
+
+output.file:
+  enabled: true
+  path: /var/log/filebeat/
+  filename: threatintel
+  permissions: 0644
+
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: true
+  reload.period: 1s

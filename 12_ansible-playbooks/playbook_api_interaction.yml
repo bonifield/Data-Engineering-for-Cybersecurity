@@ -1,0 +1,67 @@
+#
+# ansible-playbook playbook_api_interaction.yml
+#
+
+- hosts: localhost
+  become: no
+  gather_facts: no
+  # un-comment if you want to try sending or handling variables
+#  vars_files:
+#    - vars/vars.yml
+#    - vars/vault.yml
+
+  tasks:
+
+    - name: Get Simulated API Key
+      uri:
+        validate_certs: false
+        method: GET
+        url: https://localhost:5000/new_api_request
+        http_agent: "curl/7.81.0"
+        return_content: true
+      register: api_result_unparsed
+
+    - name: Parse API from JSON, Set Fact
+      set_fact:
+        api_key: "{{ (api_result_unparsed.content|from_json).new_key }}"
+        cacheable: yes
+
+    - name: Show API Key
+      debug:
+        msg: "{{ ansible_facts['api_key'] }}"
+
+#    - name: Save Facts - All
+#      local_action: copy content="{{ ansible_facts }}" dest="logs/facts_{{ ansible_host }}"
+
+    # create ./logs/
+    - name: Create logs Directory
+      local_action:
+        module: file
+        state: directory
+        path: logs
+
+    - name: Save Facts - API Key Only
+      local_action: copy content="{{ ansible_facts['api_key'] }}"
+                    dest="logs/api_{{ ansible_host }}"
+
+    - name: Validate API Key
+      uri:
+        method: POST
+        url: https://localhost:5000/validate
+        validate_certs: false
+#        force_basic_auth: true
+#        user: elastic
+#        password: abcd1234
+#        ca_path: tls/certs/ca-chain.cert.pem
+        headers:
+#          kbn-xsrf: reporting
+          Content-Type: application/json
+        return_content: true
+        body_format: json
+#        body: "{{ lookup('file','files/fleet_server_policy_bootstrap.json') | to_json }}"
+        body: {"api_key":"{{ansible_facts['api_key']}}"}
+      register: validate_response
+
+    - name: Show Validation Status
+      debug:
+        var: (validate_response.content|from_json).status

@@ -1,0 +1,47 @@
+# Private Key
+
+- name: Generate Root CA 4096-bit Private Key
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_privatekey:
+    path: "tls/caroot/ca.key"
+    passphrase: "{{ ssl_key_password }}"
+    type: RSA
+    size: 4096
+    cipher: auto
+
+# CSR
+
+- name: Generate Root CA CSR
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_csr:
+    path: "tls/caroot/ca.csr"
+    privatekey_path: "tls/caroot/ca.key"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    digest: sha512
+    country_name: US
+    state_or_province_name: MO
+    locality_name: St. Louis
+    organization_name: Business, Inc.
+    organizational_unit_name: Information Technology
+    common_name: "Root CA"
+    email_address: none@localhost
+    basicConstraints:
+      - "CA:TRUE"
+    key_usage_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+
+# Sign CSR
+
+- name: Create Self-Signed Root CA from CSR
+  delegate_to: localhost
+  run_once: true
+  community.crypto.x509_certificate:
+    path: tls/caroot/ca.cert.pem
+    csr_path: "tls/caroot/ca.csr"
+    privatekey_path: "tls/caroot/ca.key"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    provider: selfsigned

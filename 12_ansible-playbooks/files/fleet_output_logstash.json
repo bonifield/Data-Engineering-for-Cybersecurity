@@ -1,0 +1,13 @@
+{
+  "type": "logstash",
+  "id": "fleet-logstash",
+  "name": "fleet-logstash",
+  "hosts": ["logstash.local:5044"],
+  "is_default": false,
+  "is_default_monitoring": false,
+  "ssl": {
+    "certificate": "/opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem",
+    "key": "/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem",
+    "certificate_authorities": ["/opt/Elastic/Agent/certs/ca-chain.cert.pem"]
+  }
+}

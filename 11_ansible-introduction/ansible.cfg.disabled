@@ -1,0 +1,14 @@
+# https://docs.ansible.com/ansible/latest/reference_appendices/config.html
+
+# best to use use ssh-agent and an SSH config file, instead of private_key_file, but it does come in handy
+[defaults]
+remote_user = your_remote_username
+private_key_file = /path/to/your_ssh_private_key
+
+# don't use SSH config, prefer password authentication
+#[ssh_connection]
+#ssh_args = -F none -o PreferredAuthentications=password
+
+# always prompt for become pass, even for low-priv operations
+[privilege_escalation]
+become_ask_pass = True

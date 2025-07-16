@@ -1,0 +1,89 @@
+#===========================
+# Installation
+#===========================
+
+# Ubuntu
+sudo apt install ansible -y
+# other install commands
+python3 -m pip install --user ansible
+# if no pip
+https://packaging.python.org/en/latest/tutorials/installing-packages/#ensure-you-can-run-pip-from-the-command-line
+
+
+#===========================
+# Inventory Commands
+#===========================
+
+# Convert .conf/.ini to YAML format
+ansible-inventory -i inventory.conf --list --yaml | tee inventory.yml
+
+
+#===========================
+# SSH Settings
+#===========================
+ansible-playbook --ask-pass -i inventory-simple.yml pb_getfacts.yml --ssh-common-args "-F none -o PreferredAuthentications=password"
+
+
+#===========================
+# Vault Commands
+#===========================
+
+ansible-vault create vars/vault.yml
+ansible-vault edit vars/vault.yml
+# change editor
+export EDITOR="/usr/bin/nano"
+
+
+#===========================
+# Ad Hoc Commands
+#===========================
+
+# Distributing Files
+ansible all -i inventory.yml -m copy -a "src=CopyMe.txt dest=/home/j/"
+ansible all -i inventory.yml -m copy -a "src=records.txt dest=/home/jerry/ owner=jerry group=scta-bni mode=0640 force=true backup=true"
+
+# Command and Shell Modules
+ansible all -i inventory.yml -m command -a "ls -lh"
+# won't work
+ansible all -i inventory.yml -m command -a "ls -lh | grep txt"
+# does work
+ansible all -i inventory.yml -m shell -a "ls -lh | grep txt"
+
+# Updating Packages
+### Update Cache Only
+# --become = -b
+# --ask-become-pass = -K
+ansible all --become --ask-become-pass -i inventory.yml -m apt -a "update_cache=true"
+ansible all --become --ask-become-pass -i inventory.yml -m apt -a "update_cache=true name=nmap"
+ansible all --become --ask-become-pass -i inventory.yml -m apt -a "name=nmap state=absent"
+ansible all --become --ask-become-pass -i inventory.yml -m apt -a "update_cache=true name='*' state=latest"
+
+# Managing Services
+ansible all -i inventory.yml -m systemd_service -a "name=rsyslog state=restarted"
+
+# Reboot and Shutdown
+ansible webservers --become --ask-become-pass -i inventory.yml -m reboot
+ansible webservers --become --ask-become-pass -i inventory.yml -m community.general.shutdown
+ansible webservers --become --ask-become-pass -i inventory.yml -m community.general.shutdown -a "delay=60"
+
+
+#===========================
+# Passlib and User Password Creation
+#===========================
+
+# install passlib module
+python3 -m pip install passlib
+
+# create a SHA-512 hash for a password
+python3 -c "from passlib.hash import sha512_crypt; import getpass; print(sha512_crypt.using(rounds=5000).hash(getpass.getpass()))"
+# use the hash in vault.yml in place of a plaintext password
+# if you DO use a plaintext password (please don't), modify the playbook's user_password Jinja expression to
+# "{{ user_password | password_hash('sha512') }}"
+
+
+#===========================
+# Playbooks
+#===========================
+
+# run playbook; note "--become" is specified in the playbook, although deleting it from the playbook would make it necessary here
+ansible-playbook --ask-become-pass --ask-vault-pass -i inventory.yml playbook_newuser.yml

@@ -1,0 +1,10 @@
+- name: Add Hosts in Current Play to /etc/hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {% for item in ansible_play_batch %}
+      {{ hostvars[item].ansible_host }}   {{ hostvars[item].hostname }}
+      {% endfor %}
+      {% for item in groups['all'] %}
+      {{ hostvars[item].ansible_host }}   {{ hostvars[item].basename }}
+      {% endfor %}

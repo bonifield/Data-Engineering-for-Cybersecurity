@@ -1,0 +1,98 @@
+###############################################################
+[ ca ]
+# section for the ca command, redirects to CA_default
+default_ca    = CA_default
+
+[ CA_default ]
+base_dir         = tls/caroot
+# cert and key this config refers to
+certificate      = $base_dir/ca.cert.pem
+private_key      = $base_dir/ca.key.pem
+# filepaths
+new_certs_dir    = $base_dir
+database         = $base_dir/index-root.txt
+serial           = $base_dir/serial-root.txt
+# certificate specifics
+default_days     = 3650
+default_md       = sha512
+preserve         = no
+x509_extensions  = ca_root
+# required to copy Subject Alt Names (SANs) from CSR into cert
+copy_extensions  = copy
+email_in_dn      = no
+unique_subject   = no
+
+###############################################################
+[ req ]
+# section for the req command
+prompt             = no
+default_bits       = 4096
+default_md         = sha512
+distinguished_name = ca_distinguished_name
+x509_extensions    = ca_root
+string_mask        = utf8only
+
+###############################################################
+[ ca_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = MO
+localityName                = St. Louis
+organizationName            = Business, Inc.
+organizationalUnitName      = Information Technology
+commonName                  = Root CA
+emailAddress                = none@localhost
+
+###############################################################
+[ signing_policy ]
+countryName            = optional
+stateOrProvinceName    = optional
+localityName           = optional
+organizationName       = optional
+organizationalUnitName = optional
+commonName             = optional
+emailAddress           = optional
+
+###############################################################
+# v3 extensions
+###############################################################
+[ ca_root ]
+nsComment              = OpenSSL Certificate for Root CA
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints       = critical, CA:TRUE # this is specifically a CA cert
+keyUsage               = critical, cRLSign, digitalSignature, keyCertSign
+
+###############################################################
+[ ca_intermediate ]
+nsComment              = OpenSSL Certificate for Intermediate CA
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = critical, CA:TRUE, pathlen:0 # no subordinate CAs below this
+keyUsage               = critical, cRLSign, digitalSignature, keyCertSign
+
+###############################################################
+[ client_cert ]
+nsComment              = OpenSSL Certificate for Clients
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = CA:FALSE
+keyUsage               = digitalSignature, nonRepudiation
+extendedKeyUsage       = clientAuth
+
+###############################################################
+[ server_cert ]
+nsComment              = OpenSSL Certificate for Servers
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = CA:FALSE
+keyUsage               = digitalSignature, keyEncipherment, nonRepudiation
+extendedKeyUsage       = serverAuth
+
+###############################################################
+[ flex_cert ]
+nsComment              = OpenSSL Certificate for Clients or Servers
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = CA:FALSE
+keyUsage               = digitalSignature, keyEncipherment, nonRepudiation
+extendedKeyUsage       = clientAuth, serverAuth

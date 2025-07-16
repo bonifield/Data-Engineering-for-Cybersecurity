@@ -1,0 +1,140 @@
+#================================================
+# On older versions of RHEL, Ansible requires the python2 bindings for firewalld, which may not be installed by default.
+#     https://stackoverflow.com/a/72572210
+#     https://docs.ansible.com/ansible/latest/collections/ansible/posix/firewalld_module.html#parameters
+#
+# To install modern Python 3 bindings, which may also not be installed by default:
+#     sudo dnf install python3-firewall -y
+#
+# Elasticsearch networking settings
+#     https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/networking-settings
+#
+#================================================
+
+#-------------
+# 22
+#-------------
+- name: Open Port 22/TCP
+  ansible.posix.firewalld:
+    state: enabled
+    port: 22/tcp
+    permanent: true
+    immediate: true
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Rocky" or ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 22/TCP
+  ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# 8220 - Fleet
+#-------------
+- name: Open Port 8220/TCP
+  ansible.posix.firewalld:
+    state: enabled
+    port: 8220/tcp
+    permanent: true
+    immediate: true
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Rocky" or ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 8220/TCP
+  ufw:
+    rule: allow
+    port: 8220
+    proto: tcp
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# 8221 - Fleet
+#-------------
+- name: Open Port 8221/TCP
+  ansible.posix.firewalld:
+    state: enabled
+    port: 8221/tcp
+    permanent: true
+    immediate: true
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Rocky" or ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 8221/TCP
+  ufw:
+    rule: allow
+    port: 8221
+    proto: tcp
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# 9200 - Elasticsearch
+#-------------
+- name: Open Port 9200/TCP
+  ansible.posix.firewalld:
+    state: enabled
+    port: 9200/tcp
+    permanent: true
+    immediate: true
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Rocky" or ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 9200/TCP
+  ufw:
+    rule: allow
+    port: 9200
+    proto: tcp
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# 9300 - Elasticsearch
+#-------------
+- name: Open Port 9300/TCP
+  ansible.posix.firewalld:
+    state: enabled
+    port: 9300/tcp
+    permanent: true
+    immediate: true
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Rocky" or ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 9300/TCP
+  ufw:
+    rule: allow
+    port: 9300
+    proto: tcp
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# Enable and Start Firewall
+#-------------
+
+- name: Enabled FirewallD
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: true
+    name: firewalld
+  when:
+    ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Rocky" or ansible_facts['distribution'] == "RedHat"
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+  when:
+    ansible_facts['distribution'] == "Ubuntu"

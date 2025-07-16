@@ -1,0 +1,18 @@
+- name: Get Cluster Status
+  uri:
+    method: GET
+    url: "https://{{ elastic_testnode }}:9200/_cluster/health"
+    user: elastic
+    password: "{{ elastic_user_password }}"
+    ca_path: /etc/elasticsearch/certs/ca-chain.cert.pem
+  register: cluster_status
+
+- name: Show Cluster Status
+  debug:
+    var: cluster_status
+
+- name: Disable cluster.initial_master_nodes
+  ansible.builtin.replace:
+    path: /etc/elasticsearch/elasticsearch.yml
+    regexp: "^cluster.initial_master_nodes:"
+    replace: "#cluster.initial_master_nodes:"

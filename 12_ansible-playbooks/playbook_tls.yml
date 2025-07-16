@@ -1,0 +1,57 @@
+#
+# ansible-playbook -Ji inventory.yml playbook_tls_native.yml
+#
+
+- hosts: all
+  become: no
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+    # Setup
+    - name: Create TLS Required Local Directories
+      include_tasks:
+        file: tasks/tls-setup.yml
+
+    # Create Serial and Index Trackers
+#    - name: Create TLS Serial and Index Trackers
+#      include_tasks:
+#        file: tasks/tls-create-serial-tracker.yml
+
+    # Create Root Certificate Authority
+    - name: Create TLS Root Certificate Authority
+      include_tasks:
+        file: tasks/tls-caroot.yml
+
+    # Create Intermediate Certificate Authority
+    - name: Create TLS Intermediate Certificate Authority
+      include_tasks:
+        file: tasks/tls-caintermediate.yml
+
+    # Create CA Chain File
+    - name: Generate CA Chain
+      include_tasks:
+        file: tasks/tls-cachain.yml
+
+    # Generate Flex Private Keys, CSRs, and Signed Certificates
+    - name: Generate Flex Certificate
+      include_tasks:
+        file: tasks/tls-cert-flex.yml
+
+    # Container Files - PKCS12/PFX
+    - name: Create PKCS12/PFX Container Files
+      include_tasks:
+        file: tasks/tls-pkcs12.yml
+
+    # Container Files - JKS
+    - name: Create JKS Container Files
+      include_tasks:
+        file: tasks/tls-jks.yml
+
+    # Generate Wildcard Flex Certificate
+    - name: Generate Wildcard Flex Certificate
+      include_tasks:
+        file: tasks/tls-cert-wildcard.yml

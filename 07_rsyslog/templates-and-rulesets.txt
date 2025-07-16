@@ -1,0 +1,60 @@
+# property replacer syntax
+%property:fromChar:toChar:options%
+
+# string - add PRIVESC prefix
+template(name="stringy" type="string"
+string="PRIVESC::%hostname%::<%pri%>%timestamp% %hostname% %syslogtag% %msg%\n"
+)
+
+# list - add FIREWALL and hostname prefix
+template(name="firewall" type="list") {
+        constant(value="FIREWALL::")
+        property(name="hostname")
+        constant(value="::")
+        constant(value="<")
+        property(name="pri")
+        constant(value=">")
+        property(name="timestamp")
+        constant(value=" ")
+        property(name="hostname")
+        constant(value=" ")
+        property(name="syslogtag")
+        constant(value=" ")
+        property(name="msg" compressspace="on")
+        constant(value="\n")
+}
+
+# dynamic filenames (dynafile)
+template(name="hostnamefile" type="string" string="/var/log/firewall-%hostname%.log")
+
+# jsonmesg
+template(name="jsonify" type="list") {
+        property(name="jsonmesg" compressspace="on")
+        constant(value="\n")
+}
+
+# UFW to file
+call myrules
+ruleset(name="myrules") {
+    if $msg contains "[UFW " then {
+        action(
+            type="omfile"
+            FileCreateMode="0640"
+            dynaFile="hostnamefile"
+        )
+        stop
+    }
+}
+
+# replace text - kernel to popcorn
+template(name="popcorn" type="string"
+    string="<%pri%>%timestamp% %hostname% %$!tag_fixed%%msg:::sp-if-no-1st-sp%%msg%\n"
+)
+
+# actions (truncated example)
+call myrules
+ruleset(name="myrules") {
+    if re_match($fromhost-ip, "\127\\..*") and $msg contains_i "[UFW " then {
+        set $!tag_fixed = replace($syslogtag, "kernel", "popcorn");
+        action(type="omfwd" template="popcorn" target=...
+--snip--

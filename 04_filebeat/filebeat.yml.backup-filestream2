@@ -1,0 +1,35 @@
+filebeat.inputs:
+
+# input that reads local files from custom recon tooling
+- type: filestream
+  id: recon-logs
+  enabled: true
+  paths:
+    - /home/j/example-logs/subfinder*.json
+    - /home/j/example-logs/httpx*.json
+  parsers: 
+    - ndjson:
+        target: "processed"
+        add_error_key: true
+  fields_under_root: true
+  fields:
+    threat.tactic.name: "Reconnaissance"
+    threat.tactic.id: "TA0043"
+    threat.technique.name: "Gather Victim Network Information"
+    threat.technique.id: "T1590"
+
+# module location
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+
+tags: [ "tags-for-everybody", "you-get-a-tag", "and-you-get-a-tag" ]
+
+output.logstash:
+  enabled: true
+  hosts: [ "logstash.local:5044" ]
+  ssl.enabled: true
+  ssl.verification_mode: full
+  ssl.certificate: "/home/j/tls/certs/filebeat.local.flex.cert.pem"
+  ssl.key: "/home/j/tls/keys/filebeat.local.flex.key.pem"
+  ssl.certificate_authorities:
+    - /home/j/tls/certs/ca-chain.cert.pem

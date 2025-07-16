@@ -1,0 +1,103 @@
+# ALL OPENSSL CONFIGS AND COMMANDS ARE IN THE TLS CHAPTER DIRECTORY
+
+
+# see relevant Beats settings, such as setting up ILM, Kibana dashboards, and pipelines in filebeat-commands.txt
+
+
+#===========================
+# download link
+#===========================
+https://www.elastic.co/downloads/beats/winlogbeat
+
+
+#===========================
+# file transfers
+#===========================
+# Linux - start webserver one level up from your TLS directory
+python3 -m http.server 8080
+# Windows - download TLS files
+cd "C:\Program Files\Winlogbeat\"
+curl.exe http://192.168.8.133:8080/tls/certs/winlogbeat.local.client.cert.pem -o winlogbeat.local.client.cert.pem
+curl.exe http://192.168.8.133:8080/tls/keys/winlogbeat.local.client.key.pem -o winlogbeat.local.client.key.pem
+
+
+#===========================
+# start Logstash on your Linux host for the next steps
+#===========================
+# from Logstash directory (tarball download)
+bin/logstash -f conf.d/beats-mtls.conf --config.reload.automatic
+# test config inside Winlogbeat directory
+.\winlogbeat.exe test config
+.\winlogbeat.exe test output
+
+
+#===========================
+# copy downloaded Winlogbeat directory to Program Files
+#===========================
+# change TLS filepaths before copying
+# from admin PowerShell
+copy -recurse "C:\Users\j\Downloads\Winlogbeat" "C:\Program Files\"
+
+
+#===========================
+# install Winlogbeat service
+#===========================
+# change execution policies
+# EXECUTION POLICIES ARE JUST A SAFETY FEATURE, NOT A SECURITY BOUNDARY
+Get-ExecutionPolicy
+Set-ExecutionPolicy bypass
+# confirm with Y
+# install service and check status
+.\install-service-winlogbeat.ps1
+Get-Service -name Winlogbeat
+# start service and revert execution policy
+Start-Service -name Winlogbeat
+Get-Service -name Winlogbeat
+Set-ExecutionPolicy restricted
+
+
+#===========================
+# Sysmon
+#===========================
+# download the "default+" config
+curl.exe https://raw.githubusercontent.com/olafhartong/sysmon-modular/master/sysmonconfig-with-filedelete.xml -o sysmonconfig-with-filedelete.yml
+copy -recurse C:\Users\j\Downloads\sysmon "C:\Program Files\Sysmon"
+.\sysmon64.exe -i sysmonconfig-with-filedelete.xml -accepteula
+
+
+#===========================
+# enable script block logging
+# also available via GPO
+#===========================
+# in a PowerShell terminal as admin
+function Enable-PSScriptBlockLogging {
+  $basePath = @(
+    'HKLM:\Software\Policies\Microsoft'
+    'PowerShellCore\ScriptBlockLogging'
+  ) -join '\'
+  if (-not (Test-Path $basePath)) {
+     $null = New-Item $basePath -Force
+  }
+  Set-ItemProperty $basePath -Name EnableScriptBlockLogging -Value "1"
+}
+Enable-PSScriptBlockLogging
+# or via registry
+New-Item -Path "HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -Force
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -Name "EnableScriptBlockLogging" -Value 1
+
+
+#===========================
+# module logging
+# also available via GPO
+#===========================
+# via registry
+New-Item –Path "HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell" –Name ModuleLogging -Force
+Set-Itemproperty -path 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging' -Name 'EnableModuleLogging' -Value '1'
+New-Item –Path "HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging" –Name ModuleNames -Force
+Set-Itemproperty -path 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging\ModuleNames' -Name '*' -Value '*'
+
+#===========================
+# list event logs
+#===========================
+Get-WinEvent -ListLog *
+Get-WinEvent -ListLog * | where RecordCount -gt 0 | sort -descending -property RecordCount

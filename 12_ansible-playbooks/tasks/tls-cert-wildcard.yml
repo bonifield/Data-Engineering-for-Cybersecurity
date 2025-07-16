@@ -1,0 +1,92 @@
+# Private Key
+
+- name: Generate Flex 4096-bit Private Key
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_privatekey:
+    path: "tls/keys/wildcard.{{ domain }}.flex.key.pem"
+    passphrase: "{{ ssl_key_password }}"
+    type: RSA
+    size: 4096
+    cipher: auto
+
+- name: Create SAN From All In-Play Inventory Hosts
+  delegate_to: localhost
+  run_once: true
+  register: san
+  debug:
+    msg: "DNS:*.{{ domain }},{% for item in ansible_play_batch %}{% if loop.last %}DNS:{{ hostvars[item].hostname }},DNS:{{ hostvars[item].basename | trim }}{% else %}DNS:{{ hostvars[item].hostname }},DNS:{{ hostvars[item].basename }},{% endif %}{% endfor %}"
+
+#- name: Create SAN Without Trailing Newline
+#  delegate_to: localhost
+#  run_once: true
+#  register: san_trimmed
+#  debug:
+#    msg: "{{ san | trim }}"
+
+- name: Generate Flex CSR
+  delegate_to: localhost
+  run_once: true
+  community.crypto.openssl_csr:
+    path: "tls/csr/wildcard.{{ domain }}.flex.csr"
+    privatekey_path: "tls/keys/wildcard.{{ domain }}.flex.key.pem"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    digest: sha512
+    country_name: US
+    state_or_province_name: MO
+    locality_name: St. Louis
+    organization_name: Business, Inc.
+    organizational_unit_name: Information Technology
+#    common_name: "wildcard.{{ domain }}"
+    common_name: "*.{{ domain }}"
+    email_address: none@localhost
+    # works, commented for testing
+    #subject_alt_name: "{{ san.msg }}"
+    subject_alt_name: "DNS:*.{{ domain }},{% for item in ansible_play_batch %}{% if loop.last %}DNS:{{ hostvars[item].hostname }},DNS:{{ hostvars[item].basename | trim }}{% else %}DNS:{{ hostvars[item].hostname }},DNS:{{ hostvars[item].basename }},{% endif %}{% endfor %}"
+    basicConstraints:
+      - "CA:FALSE"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+      - nonRepudiation
+    extended_key_usage:
+      - clientAuth
+      - serverAuth
+
+# Create Signed Certificates
+
+- name: Generate Flex Signed Certificate
+  delegate_to: localhost
+  run_once: true
+  openssl_certificate:
+    path: "tls/certs/wildcard.{{ domain }}.flex.cert.pem"
+    csr_path: "tls/csr/wildcard.{{ domain }}.flex.csr"
+    ownca_path: tls/caintermediate/ca-int.cert.pem
+    ownca_privatekey_path: tls/caintermediate/ca-int.key
+    ownca_privatekey_passphrase: "{{ ssl_key_password }}"
+    ownca_not_after: "+3650d"
+    provider: ownca
+
+- name: Create Passwordless Key
+  delegate_to: localhost
+  run_once: true
+  command: "openssl rsa -in tls/keys/wildcard.{{ domain }}.flex.key.pem -passin pass:abcd1234 -out tls/keys/wildcard.{{ domain }}.flex.key.nopass.pem"
+
+# Create PKCS12 (PFX) Container
+
+- name: Generate PKCS12 (PFX) Container File
+  delegate_to: localhost
+  run_once: true
+  when: hostvars[inventory_hostname].requires_pkcs12
+  community.crypto.openssl_pkcs12:
+    action: export
+    path: "tls/certs/wildcard.{{ domain }}.flex.pkcs12"
+    friendly_name: "wildcard.{{ domain }}"
+    privatekey_path: "tls/keys/wildcard.{{ domain }}.flex.key.pem"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    passphrase: "{{ ssl_key_password }}"
+    certificate_path: "tls/certs/wildcard.{{ domain }}.flex.cert.pem"
+    other_certificates_parse_all: true
+    other_certificates:
+      - tls/certs/ca-chain.cert.pem
+    state: present

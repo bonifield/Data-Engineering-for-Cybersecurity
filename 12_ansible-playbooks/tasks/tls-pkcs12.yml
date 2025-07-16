@@ -1,0 +1,17 @@
+# Create PKCS12 (PFX) Container
+
+- name: Generate PKCS12 (PFX) Container File
+  delegate_to: localhost
+  when: hostvars[inventory_hostname].requires_pkcs12
+  community.crypto.openssl_pkcs12:
+    action: export
+    path: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.pkcs12"
+    friendly_name: "{{ hostvars[inventory_hostname].hostname }}"
+    privatekey_path: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    passphrase: "{{ ssl_key_password }}"
+    certificate_path: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+    other_certificates_parse_all: true
+    other_certificates:
+      - tls/certs/ca-chain.cert.pem
+    state: present

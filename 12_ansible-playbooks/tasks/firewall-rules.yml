@@ -1,0 +1,119 @@
+#================================================
+# On older versions of RHEL, Ansible requires the python2 bindings for firewalld, which may not be installed by default.
+#     https://stackoverflow.com/a/72572210
+#     https://docs.ansible.com/ansible/latest/collections/ansible/posix/firewalld_module.html#parameters
+#
+# To install modern Python 3 bindings, which may also not be installed by default:
+#     sudo dnf install python3-firewall -y
+#
+# Elasticsearch networking settings
+#     https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/networking-settings
+#
+#================================================
+
+#-------------
+# Single Port - 22
+#-------------
+
+- name: Open Port 22/TCP
+  #equivalent command: firewall-offline-cmd --zone=public --add-port=22/tcp --permanent
+  ansible.posix.firewalld:
+    state: enabled
+    port: 22/tcp
+    permanent: true
+    immediate: true
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 22/TCP
+  #equivalent command: ufw allow 22/tcp
+  community.general.ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# Multiple IPs for Single Port
+#-------------
+
+- name: Open Port 6379/TCP
+  ansible.posix.firewalld:
+    state: enabled
+    port: 6379/tcp
+    permanent: true
+    immediate: true
+    source: "{{ item }}"
+  loop:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "RedHat"
+
+- name: Open Port 6379/TCP
+  community.general.ufw:
+    rule: allow
+    port: 6379
+    proto: tcp
+    from_ip: "{{ item }}"
+  loop:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+#-------------
+# Multiple Ports for Single IP
+#-------------
+
+- name: Open Ports 5044,8443,9200/TCP from 192.168.0.0/16
+  ansible.posix.firewalld:
+    state: enabled
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    source: 192.168.0.0/16
+  loop:
+    - 5044/tcp
+    - 8443/tcp
+    - 9200/tcp
+  #vars:
+  #  ansible_python_interpreter: /usr/bin/python
+  when:
+    ansible_facts['distribution'] == "RedHat"
+
+- name: Open Ports 5044,8443,9200/TCP from 192.168.0.0/16
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    from_ip: 192.168.0.0/16
+  loop:
+    - 5044
+    - 8443
+    - 9200
+
+#-------------
+# Enable and (Re)start Firewall
+#-------------
+
+- name: Restart Firewalld
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: true
+    name: firewalld
+  when:
+    ansible_facts['distribution'] == "RedHat"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when:
+    ansible_facts['distribution'] == "Ubuntu"

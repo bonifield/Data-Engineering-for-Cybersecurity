@@ -1,0 +1,22 @@
+- name: Print Package Manager
+  debug:
+    msg: "{{ ansible_facts['pkg_mgr'] }}"
+
+# Apt
+- name: Remove Apt Signing Key from URL
+  ansible.builtin.apt_key:
+    id: "{{ gpg.fingerprint }}"
+    state: absent
+  when:
+    ansible_facts['pkg_mgr'] == "apt"
+
+# RPM
+- name: Remove RPM Signing Key from URL
+  ansible.builtin.rpm_key:
+    # use the ID in the key parameter, not the fingerprint parameter, as the documentation says 
+    # "Key that will be modified. Can be... or a keyid if the key already exists in the database"
+    #fingerprint: 46095ACC8548582C1A2699A9D27D666CD88E42B4
+    key: "{{ gpg.fingerprint }}"
+    state: absent
+  when:
+    ansible_facts['pkg_mgr'] == "rpm" or ansible_facts['pkg_mgr'] == "dnf"

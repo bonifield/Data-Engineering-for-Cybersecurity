@@ -1,0 +1,11 @@
+sudo apt install python3-virtualenv
+
+virtualenv myapp
+myapp/bin/pip install flask pyopenssl
+
+# make app.py
+
+chmod +x app.py
+./app.py
+
+# curl -k https://localhost:5000/json/

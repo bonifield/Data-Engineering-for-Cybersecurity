@@ -1,0 +1,71 @@
+# ALL OPENSSL CONFIGS AND COMMANDS ARE IN THE TLS CHAPTER DIRECTORY
+
+
+# module path: Filebeat location, then modules.d/<module>.yml.disabled
+# run: sudo filebeat modules enable <module>
+# then edit the yml config (now, minus the .disabled extension)
+
+
+# run locally, with ./filebeat (may need to chown to root then sudo for some log locations)
+# run using sudo, if installed via package
+
+
+#===========================
+# test configs and output
+#===========================
+./filebeat test config
+./filebeat test output
+
+
+#===========================
+# run filebeat manually, with logs sent to stderr instead of /var/log/filebeat/ or the configured logging directory
+#===========================
+./filebeat -e
+# with jq
+./filebeat -e 2>&1 | jq '.["message"]'
+
+
+#===========================
+# working with modules
+#===========================
+./filebeat modules list
+./filebeat modules enable zeek
+# modify modules.d/zeek.yml
+./filebeat modules disable zeek
+
+
+#===========================
+# configure ILM and pipelines, must have working Elasticsearch output and proper permissions
+# RECOMMEND HAVING A DEDICATED, SET ASIDE FILEBEAT AND ROLE FOR THIS ACTION
+#===========================
+./filebeat setup --pipelines -e
+./filebeat setup --pipelines --index-management
+
+
+#===========================
+# configure Kibana dashboards
+# add to filebeat.yml, change settings as necessary
+# RECOMMEND HAVING A DEDICATED, SET ASIDE FILEBEAT AND ROLE FOR THIS ACTION
+#===========================
+setup.kibana:
+  host: "https://kibana.local:5601"
+  ssl.enabled: true
+  ssl.verification_mode: none
+  ssl.certificate_authorities: ["/etc/logstash/certs/ca-chain.cert.pem"]
+  ssl.certificate: "/etc/logstash/certs/wildcard.local.flex.cert.pem"
+  ssl.key: "/etc/logstash/certs/wildcard.local.flex.key.pem"
+  ssl.key_passphrase: "abcd1234"
+  protocol: "https"
+  username: "elastic"
+  password: "abcd1234"
+
+# run setup subcommand to add dashboards and visualizations
+./filebeat setup --dashboards
+
+
+#===========================
+# keystore
+#===========================
+./filebeat keystore add --force MY_KEY_PASSPHRASE
+# to use the passphrase in filebeat.yml, use %{variable} syntax
+ssl.key_passphrase: %{MY_KEY_PASSPHRASE}

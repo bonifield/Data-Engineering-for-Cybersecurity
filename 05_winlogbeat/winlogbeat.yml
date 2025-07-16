@@ -1,0 +1,59 @@
+winlogbeat.event_logs:
+#  - name: Application
+#    ignore_older: 72h
+#  - name: System
+  - name: Security
+  - name: Microsoft-Windows-Sysmon/Operational
+  - name: Windows PowerShell
+    event_id: 400, 403, 600, 800
+  - name: Microsoft-Windows-PowerShell/Operational
+    event_id: 4103, 4104, 4105, 4106
+#    event_id: 4104
+#  - name: ForwardedEvents
+#    tags: [forwarded]
+  - name: Microsoft-Windows-Windows Defender/Operational
+  - name: Microsoft-Windows-Bits-Client/Operational
+#  - name: Microsoft-Windows-Windows Firewall With Advanced Security/Firewall
+#  - name: Microsoft-Windows-Dhcp-Client/Admin
+#  - name: Microsoft-Windows-Security-Mitigations/KernelMode
+#  - name: Microsoft-Windows-WinRM/Operational
+#  - name: Microsoft-Windows-SMBServer/Operational
+#  - name: Microsoft-Windows-SmbClient/Security
+#  - name: Microsoft-Windows-SmbClient/Connectivity
+#  - name: Microsoft-Windows-SmbClient/Audit
+#  - name: Oalerts
+#  - name: Microsoft-Windows-Ntfs/Operational
+
+
+processors:
+  # drop BITS to offical Microsoft servers
+  - drop_event:
+#      commented to show indentation when there's no and/or statements
+#      when:
+#        contains:
+#          winlog.event_data.url: "https://g.live.com/"
+      when:
+        or:
+          - contains:
+              winlog.event_data.url: "https://g.live.com/"
+          # example event code
+          - equals:
+              event.code: 12345
+          # example range of event codes
+          - range:
+              event.code.gte: 0
+              event.code.lt: 999
+
+
+output.logstash:
+  enabled: true
+  # you will get an error if you use an IP since the certs only have hostnames
+  # use a DNS server, or modify: C:\Windows\System32\drivers\etc\hosts
+  #hosts: [ "192.168.65.132:5044" ]
+  hosts: [ "logstash.local:5044" ]
+  ssl.enabled: true
+  ssl.verification_mode: full
+  ssl.certificate: "C:\\Program Files\\Winlogbeat\\winlogbeat.local.client.cert.pem"
+  ssl.key: "C:\\Program Files\\Winlogbeat\\winlogbeat.local.client.key.pem"
+  ssl.key_passphrase: "abcd1234"
+  ssl.certificate_authorities: [ "C:\\Program Files\\Winlogbeat\\ca-chain.cert.pem" ]

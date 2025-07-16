@@ -1,0 +1,33 @@
+filebeat.inputs:
+
+# input that reads /var/log/*.log
+# see also the system module
+#	filebeat modules enable system
+#	# enable settings in modules.d/system.yml
+#	# then run filebeat
+- type: filestream
+  id: local-syslog-files
+  enabled: true
+  paths:
+    - /var/log/*.log
+  exclude_lines: ['.*UFW.*']
+  parsers:
+    - syslog:
+        format: auto
+        add_error_key: true
+
+# module location
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+
+tags: [ "tags-for-everybody", "you-get-a-tag", "and-you-get-a-tag" ]
+
+output.logstash:
+  enabled: true
+  hosts: [ "logstash.local:5044" ]
+  ssl.enabled: true
+  ssl.verification_mode: full
+  ssl.certificate: "/home/j/tls/certs/filebeat.local.flex.cert.pem"
+  ssl.key: "/home/j/tls/keys/filebeat.local.flex.key.pem"
+  ssl.certificate_authorities:
+    - /home/j/tls/certs/ca-chain.cert.pem

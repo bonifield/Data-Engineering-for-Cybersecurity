@@ -1,0 +1,15 @@
+output.logstash:
+  enabled: true
+  hosts: [ "threatintel.local:5044" ]
+  ssl.enabled: true
+  ssl.verification_mode: full
+  ssl.certificate: /etc/ssl/bookproject/wildcard.local.flex.cert.pem
+  ssl.key: /etc/ssl/bookproject/wildcard.local.flex.key.pem
+  ssl.key_passphrase: abcd1234
+  ssl.certificate_authorities:
+    - /etc/ssl/bookproject/ca-chain.cert.pem
+
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: true
+  reload.period: 15s

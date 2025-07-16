@@ -1,0 +1,116 @@
+#===========================
+# TLS Setup and Commands
+#===========================
+
+# configurations: see tls/configs/
+# commands: see quick-tls.sh
+
+
+#===========================
+# Logstash Prep
+# substitute X.Y.Z for the current version numbers
+#===========================
+
+# download Logstash
+cd ~/Downloads
+wget https://artifacts.elastic.co/downloads/logstash/logstash-X.Y.Z-linux-x86_64.tar.gz
+tar xvzf logstash-X.Y.Z-linux-x86_64.tar.gz
+mv logstash-X.Y.Z logstash
+cd logstash
+mkdir {certs,conf.d}
+
+# copy TLS files
+cp ~/tls/logstash.local.flex.cert.pem ~/Downloads/logstash/certs/
+cp ~/tls/logstash.local.flex.key.pem ~/Downloads/logstash/certs/
+cp ~/tls/ca-chain.cert.pem ~/Downloads/logstash/certs/
+
+
+#===========================
+# Configure Logstash (Beats over mTLS)
+#===========================
+
+nano conf.d/beats-mtls.conf
+
+# see contents of beats-mtls.conf
+
+
+#===========================
+# Firewall Ports (all from this chapter, able to be consolidated)
+#===========================
+
+# UFW
+# you can also use 22,5044,5514/tcp in one command
+sudo ufw allow 22/tcp
+sudo ufw allow 5044/tcp
+sudo ufw allow 5514/tcp
+
+# Firewalld
+# you can also use multiple --add-port options in one command
+sudo firewall-cmd --zone=public --add-port=22/tcp –-permanent
+sudo firewall-cmd --zone=public --add-port=5044/tcp –-permanent
+sudo firewall-cmd --zone=public --add-port=5514/tcp –-permanent
+sudo firewall-cmd --reload
+
+
+#===========================
+# Test and Run Logstash
+#===========================
+
+bin/logstash -f conf.d/logstash-mtls.conf --config.test_and_exit
+bin/logstash -f conf.d/logstash-mtls.conf --config.reload.automatic
+
+
+#===========================
+# SSH Setup
+#===========================
+
+# Ubuntu
+sudo apt install openssh-server
+sudo ufw allow ssh
+sudo systemctl restart ssh
+
+# RHEL, CentOS, Rocky
+sudo dnf install openssh-server
+sudo firewall-cmd --zone=public --add-service=ssh --permanent
+sudo firewall-cmd --reload
+sudo systemctl restart sshd
+
+
+#===========================
+# SSH Key Creation and Agent Use
+#
+# SUBSTITUTE j FOR YOUR USERNAME
+#
+#===========================
+
+# generate key
+ssh-keygen -b 4096 -f ~/.ssh/j_id_rsa
+
+# start agent
+eval $(ssh-agent -s)
+ssh-add ~/.ssh/j_id_rsa
+
+# alias
+nano ~/.bashrc
+# add the following line
+alias start-ssh='eval "$(ssh-agent -s)" && ssh-add /home/j/.ssh/j_id_rsa'
+# save and exit, then dot source to use in the current session
+. ~/.bashrc
+
+
+#===========================
+# Using SSH Keys
+#===========================
+
+# add settings to ~/.ssh/config
+Host 10.*.*.* 192.168.*.* *.local *.internal
+Port 22
+User j
+IdentityFile ~/.ssh/j_id_rsa
+
+
+# distribute
+ssh-copy-id -i ~/.ssh/j_id_rsa.pub j@192.168.2.20
+ssh 192.168.2.20
+# command without a key:
+# ssh -i ~/.ssh/j_id_rsa j@192.168.2.20

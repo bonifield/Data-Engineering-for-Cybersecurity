@@ -1,0 +1,30 @@
+###############################################################
+[ req ]
+prompt             = no
+default_bits       = 4096
+default_md         = sha512
+default_keyfile    = tls/keys/elasticsearch03.local.flex.key.pem
+distinguished_name = flex_distinguished_name
+req_extensions     = flex_cert
+
+###############################################################
+[ flex_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = MO
+localityName                = St. Louis
+organizationName            = Business, Inc.
+organizationalUnitName      = Information Technology
+commonName                  = Elasticsearch Flex
+emailAddress                = none@localhost
+
+###############################################################
+[ flex_cert ]
+nsComment              = OpenSSL Certificate for Clients or Servers
+subjectAltName         = @alternate_names
+
+###############################################################
+[ alternate_names ]
+DNS.1  = elasticsearch03
+DNS.2  = elasticsearch03.local
+# DO NOT INCLUDE IP ADDRESSES IN SAN
+#IP.1  = 192.168.8.133

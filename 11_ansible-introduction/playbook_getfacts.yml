@@ -1,0 +1,50 @@
+#
+# ansible-playbook -i inventory.yml pb_getfacts.yml
+#
+
+- hosts: all
+
+  tasks:
+
+    - name: Print Facts - hostname and distribution
+      debug:
+        msg: "{{ ansible_facts['hostname'] }} - {{ ansible_facts['distribution'] }}"
+      register: hostname_and_distribution
+
+    - name: Print Facts - hostname
+      debug:
+        var: ansible_facts['hostname'] }}
+
+    - name: Print Facts - distribution
+      debug:
+        var: ansible_facts['distribution'] }}
+
+    # create ./logs/
+    - name: Create logs Directory
+      local_action:
+        module: file
+        state: directory
+        path: logs
+
+    # create the log file first
+    - name: Create logs/hostname_and_distribution.log
+      local_action: file path="logs/hostname_and_distribution.log" state="touch"
+
+    # chapter 12
+    - name: Save Host and Distribution Information
+      local_action:
+        module: blockinfile
+        marker: ""
+        path: logs/hostname_and_distribution.log
+        block: |
+          {{ hostname_and_distribution.msg }}
+
+    - name: Save Facts
+      local_action: copy content="{{ ansible_facts }}" dest="logs/facts_{{ ansible_host }}.json"
+
+    # longform local_action format
+    - name: Save Distribution
+      local_action:
+        module: copy
+        content: "{{ ansible_facts['distribution'] }}"
+        dest: "logs/distribution_{{ ansible_host }}.json"

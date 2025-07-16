@@ -1,0 +1,22 @@
+# Create CA Chain File
+# 'marker: ""' lets your append multiple blocks to the same chain file
+
+- name: Create CA Chain File - Add Root CA
+  delegate_to: localhost
+  run_once: true
+  blockinfile:
+    path: tls/certs/ca-chain.cert.pem
+    create: yes
+    state: present
+    marker: ""
+    block: "{{ lookup('file', 'tls/caroot/ca.cert.pem') }}"
+
+- name: Create CA Chain File - Add Intermediate CA
+  delegate_to: localhost
+  run_once: true
+  blockinfile:
+    path: tls/certs/ca-chain.cert.pem
+    create: yes
+    state: present
+    marker: ""
+    block: "{{ lookup('file', 'tls/caintermediate/ca-int.cert.pem') }}"

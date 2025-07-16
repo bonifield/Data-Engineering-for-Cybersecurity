@@ -1,0 +1,44 @@
+processors:
+
+  - decode_json_fields:
+     fields: [ "message" ]
+      process_array: true
+      max_depth: 25
+      target: "processed"
+      overwrite_keys: false
+      add_error_key: true
+
+  - drop_fields:
+      fields: [ "event.original", "host", "message", "log.offset" ]
+      when:
+        #equals:
+          #log.file.path: "/home/j/example-logs/httpx-owasp.org.json"
+        or:
+          - equals:
+              log.file.path: "/home/j/example-logs/httpx-owasp.org.json"
+          - equals:
+              log.file.path: "/home/j/example-logs/subfinder-owasp.org.json"
+
+  - script:
+      lang: javascript
+      # example
+      # 2023-04-27T22:37:12.463504006-05:00
+      #                       |23    |29
+      source: >
+        function process(event) {
+          var t = event.Get("processed.timestamp")
+          var t1 = t.slice(0, 23)
+          var t2 = t.slice(29)
+          var t3 = t1+t2
+          event.Put("processed.timestamp_fixed", t3)
+        }
+
+  - timestamp:
+      field: "processed.timestamp_fixed"
+      layouts:
+        - '2006-01-02T15:04:05.999-07:00'
+      test:
+        - '2099-04-27T22:37:12.463-05:00'
+      when:
+        equals:
+          log.file.path: "/home/j/example-logs/httpx-owasp.org.json"

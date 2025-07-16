@@ -1,0 +1,40 @@
+- name: Create /opt/Elastic/Agent/certs/
+  file:
+    path: /opt/Elastic/Agent/certs/
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+
+- name: Copy CA Chain PEM to Remote
+  copy:
+    src: "tls/certs/ca-chain.cert.pem"
+    dest: "/opt/Elastic/Agent/certs/"
+    owner: root
+    group: root
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Copy Fleet TLS Key to Remote
+  copy:
+    src: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    dest: "/opt/Elastic/Agent/certs/"
+    owner: root
+    group: root
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Copy Fleet TLS Certificate to Remote
+  copy:
+    src: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+    dest: "/opt/Elastic/Agent/certs/"
+    owner: root
+    group: root
+    mode: 0750
+  when:
+    ansible_facts['distribution'] == "Ubuntu"
+
+- name: Create Unencrypted (nopass) Key
+  command: openssl rsa -in /opt/Elastic/Agent/certs/fleet.local.flex.key.pem -passin pass:"{{ ssl_key_password }}" -out /opt/Elastic/Agent/certs/fleet.local.flex.key.nopass.pem

@@ -1,0 +1,64 @@
+# key locations
+# main configuration: /etc/rsyslog.conf
+# modular configurations: /etc/rsyslog.d/
+
+
+#===========================
+# installation
+#===========================
+sudo apt install rsyslog rsyslog-doc rsyslog-openssl rsyslog-kafka
+sudo dnf install rsyslog rsyslog-doc rsyslog-openssl rsyslog-kafka
+
+
+#===========================
+# check service status and start rsyslog
+#===========================
+systemctl status rsyslog
+sudo systemctl start rsyslog
+sudo systemctl enable rsyslog
+
+
+#######
+# ALL TLS COMMANDS ARE IN THE TLS CHAPTER DIRECTORY
+# OR USE quick-tls.sh TO CREATE ALL OF THE TLS FILES FOR THIS BOOK
+#######
+
+
+# place TLS files in /etc/ssl/rsyslog
+
+
+#===========================
+# make /etc/ssl/rsyslog and set permissions, copy files
+#===========================
+sudo mkdir /etc/ssl/rsyslog
+sudo chmod 750 /etc/ssl/rsyslog
+
+
+#===========================
+# copy files to /etc/ssl/rsyslog
+#===========================
+sudo cp ~/tls/certs/ca-chain.cert.pem /etc/ssl/rsyslog/
+sudo cp ~/tls/certs/rsyslog.local.flex.cert.pem /etc/ssl/rsyslog/
+sudo cp ~/tls/keys/rsyslog.local.flex.key.nopass.pem /etc/ssl/rsyslog/
+
+
+#===========================
+# set access permissions
+#===========================
+sudo chown -R root:syslog /etc/ssl/rsyslog/
+sudo chmod 640 /etc/ssl/rsyslog/{ca-chain.cert.pem,rsyslog.local.flex.cert.pem,rsyslog.local.flex.key.nopass.pem}
+
+
+#===========================
+# test current configurations
+#===========================
+sudo rsyslogd -N 1
+# single config
+sudo rsyslogd -N 1 -f <filename>
+
+
+#===========================
+# restart rsyslog AFTER EVERY VERIFIED-WORKING CONFIGURATION CHANGE
+#===========================
+sudo systemctl restart rsyslog.service
+# for weird issues, you may also try restarting socket.service

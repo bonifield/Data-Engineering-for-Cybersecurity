@@ -1,0 +1,29 @@
+#
+#   run the playbook from the top level of the role directory
+#       ansible-playbook -JKi inventory-elastic.yml playbook_kibana.yml
+#
+
+- hosts: kibana
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/vars.yml
+    - vars/vault.yml
+
+  tasks:
+
+    - name: Install Kibana
+      include_tasks:
+        file: tasks/kibana-install.yml
+
+    - name: Configure Kibana Certificates
+      include_tasks:
+        file: tasks/kibana-certs.yml
+
+    - name: Generate Kibana Encryption Keys
+      include_tasks:
+        file: tasks/kibana-encryption-keys.yml
+
+    - name: Start Kibana Service
+      include_tasks:
+        file: tasks/kibana-start-service.yml

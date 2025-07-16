@@ -1,0 +1,8 @@
+# yes, the strange line break is necessary, omitting it would have seed_hosts run directly into initial_master_nodes
+- name: Add Hosts in Current Play to List
+  blockinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    block: |
+      discovery.seed_hosts: [{% for item in ansible_play_batch %}{% if loop.last %}"{{ hostvars[item].hostname }}:9300"]{% else %}"{{ hostvars[item].hostname }}:9300",{% endif %}{% endfor %}
+      
+      cluster.initial_master_nodes: [{% for item in ansible_play_batch %}{% if loop.last %}"{{ hostvars[item].hostname }}"]{% else %}"{{ hostvars[item].hostname }}",{% endif %}{% endfor %}

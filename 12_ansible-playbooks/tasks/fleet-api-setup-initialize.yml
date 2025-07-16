@@ -1,0 +1,97 @@
+# fleet-api-setup-initialize.yml
+
+- name: Initialize Fleet Setup (POST)
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: POST
+    url: https://kibana.local:5601/api/fleet/setup
+    force_basic_auth: true
+    user: elastic
+    password: abcd1234
+    ca_path: tls/certs/ca-chain.cert.pem
+    headers:
+       kbn-xsrf: reporting
+    return_content: true
+
+- name: Check Initialized Fleet Setup (GET)
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: GET
+    url: https://kibana.local:5601/api/fleet/settings
+    force_basic_auth: true
+    user: elastic
+    password: abcd1234
+    ca_path: tls/certs/ca-chain.cert.pem
+    headers:
+       kbn-xsrf: reporting
+    return_content: true
+
+- name: Add Fleet Server Hosts (PUT)
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: PUT
+    url: https://kibana.local:5601/api/fleet/settings
+    force_basic_auth: true
+    user: elastic
+    password: abcd1234
+    ca_path: tls/certs/ca-chain.cert.pem
+    headers:
+       kbn-xsrf: reporting
+       Content-Type: application/json
+    return_content: true
+    body_format: json
+    body: "{{ lookup('file','files/fleet_server_hosts.json') | to_json }}"
+
+- name: Set Fleet Default Output to Elasticsearch (PUT)
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: PUT
+    url: https://kibana.local:5601/api/fleet/outputs/fleet-default-output
+    force_basic_auth: true
+    user: elastic
+    password: abcd1234
+    ca_path: tls/certs/ca-chain.cert.pem
+    headers:
+       kbn-xsrf: reporting
+       Content-Type: application/json
+    return_content: true
+    body_format: json
+    body: "{{ lookup('file','files/fleet_default_output.json') | to_json }}"
+
+- name: Update Fleet Default Elasticsearch Output (POST)
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: POST
+    url: https://kibana.local:5601/api/fleet/outputs
+    force_basic_auth: true
+    user: elastic
+    password: abcd1234
+    ca_path: tls/certs/ca-chain.cert.pem
+    headers:
+       kbn-xsrf: reporting
+       Content-Type: application/json
+    return_content: true
+    body_format: json
+    body: "{{ lookup('file','files/fleet_output_elasticsearch.json') | to_json }}"
+
+- name: Bootstrap Fleet Server Policy (POST)
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: POST
+    url: https://kibana.local:5601/api/fleet/agent_policies
+    force_basic_auth: true
+    user: elastic
+    password: abcd1234
+    ca_path: tls/certs/ca-chain.cert.pem
+    headers:
+       kbn-xsrf: reporting
+       Content-Type: application/json
+    return_content: true
+    body_format: json
+    body: "{{ lookup('file','files/fleet_server_policy_bootstrap.json') | to_json }}"

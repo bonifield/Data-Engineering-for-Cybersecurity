@@ -1,0 +1,16 @@
+# note module name is "uri" NOT "url"
+- name: POST JSON to API Using Basic Authentication
+  delegate_to: localhost
+  run_once: true
+  uri:
+    method: POST
+    url: "https://{{ url }}:8080/{{ api }}"
+    force_basic_auth: true
+    user: bob
+    password: "{{ bob_password }}"
+    ca_path: /tmp/ca.pem
+    headers:
+       Content-Type: application/json
+    return_content: true
+    body_format: json
+    body: "{{ lookup('file','files/my-content-to-post.json') | to_json }}"

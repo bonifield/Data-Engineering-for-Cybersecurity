@@ -1,0 +1,3 @@
+# this sends all traffic to localhost port 5514/tcp
+# this is a legacy format; use the newer Advanced/Rainer format (chapter 7)
+*.*	@@localhost:5514

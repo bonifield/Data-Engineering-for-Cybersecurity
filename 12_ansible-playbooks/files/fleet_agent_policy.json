@@ -1,0 +1,12 @@
+{
+  "name": "agent-policy-1",
+  "id": "agent-policy-1",
+  "description": "",
+  "namespace": "default",
+  "monitoring_enabled": [
+    "logs",
+    "metrics"
+  ],
+  "inactivity_timeout": 1209600,
+  "is_protected": false
+}

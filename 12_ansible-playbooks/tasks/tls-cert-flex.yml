@@ -1,0 +1,57 @@
+# Private Key
+
+- name: Generate Flex 4096-bit Private Key
+  delegate_to: localhost
+  community.crypto.openssl_privatekey:
+    path: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    passphrase: "{{ ssl_key_password }}"
+    type: RSA
+    size: 4096
+    cipher: auto
+
+# nopass Key
+
+- name: Create Unencrypted (nopass) Key
+  delegate_to: localhost
+  command: "openssl rsa -in tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem -passin pass:{{ ssl_key_password }} -out tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.nopass.pem"
+
+# CSR
+
+- name: Generate Flex CSR
+  delegate_to: localhost
+  community.crypto.openssl_csr:
+    path: "tls/csr/{{ hostvars[inventory_hostname].hostname }}.flex.csr"
+    privatekey_path: "tls/keys/{{ hostvars[inventory_hostname].hostname }}.flex.key.pem"
+    privatekey_passphrase: "{{ ssl_key_password }}"
+    digest: sha512
+    country_name: US
+    state_or_province_name: MO
+    locality_name: St. Louis
+    organization_name: Business, Inc.
+    organizational_unit_name: Information Technology
+    common_name: "{{ hostvars[inventory_hostname].hostname }}"
+    email_address: none@localhost
+    subject_alt_name: "DNS:{{ hostvars[inventory_hostname].basename }},DNS:{{ hostvars[inventory_hostname].hostname }}"
+    basicConstraints:
+      - "CA:FALSE"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+      - nonRepudiation
+    extended_key_usage:
+      - clientAuth
+      - serverAuth
+
+# Create Signed Certificates
+
+- name: Generate Flex Signed Certificate
+  delegate_to: localhost
+  openssl_certificate:
+    path: "tls/certs/{{ hostvars[inventory_hostname].hostname }}.flex.cert.pem"
+    csr_path: "tls/csr/{{ hostvars[inventory_hostname].hostname }}.flex.csr"
+    ownca_path: tls/caintermediate/ca-int.cert.pem
+    ownca_privatekey_path: tls/caintermediate/ca-int.key
+    ownca_privatekey_passphrase: "{{ ssl_key_password }}"
+    ownca_not_after: "+3650d"
+    ownca_digest: sha512
+    provider: ownca

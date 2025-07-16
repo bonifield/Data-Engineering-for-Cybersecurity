@@ -1,0 +1,40 @@
+node.name: "{{ hostvars[inventory_hostname].hostname }}"
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html
+node.roles: [ "master", "data", "ingest", "transform" ]
+cluster.name: "{{ cluster.name }}"
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: true
+xpack.security.http.ssl:
+  enabled: true
+  verification_mode: full
+  keystore.path: "certs/{{ hostvars[inventory_hostname].hostname }}.flex.pkcs12"
+  #truststore.path: "certs/truststore.jks"
+  certificate_authorities: "certs/ca-chain.cert.pem"
+xpack.security.transport.ssl:
+  enabled: true
+  verification_mode: full
+  keystore.path: "certs/{{ hostvars[inventory_hostname].hostname }}.flex.pkcs12"
+  #truststore.path: "certs/truststore.jks"
+  certificate_authorities: "certs/ca-chain.cert.pem"
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-network.html
+http.host: ["{{ hostvars[inventory_hostname].hostname }}"]
+transport.host: ["{{ hostvars[inventory_hostname].hostname }}"]
+network.host: ["{{ hostvars[inventory_hostname].hostname }}"]
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-discovery-bootstrap-cluster.html
+bootstrap.memory_lock: true
+discovery.seed_hosts: [{% for item in ansible_play_batch %}{% if loop.last %}"{{ hostvars[item].hostname }}:9300"]
+{% else %}"{{ hostvars[item].hostname }}:9300",{% endif %}{% endfor %}
+cluster.initial_master_nodes: [{% for item in ansible_play_batch %}{% if loop.last %}"{{ hostvars[item].hostname }}"]
+{% else %}"{{ hostvars[item].hostname }}",{% endif %}{% endfor %}
+
+# COMMENTED ALL ADDRESSES, WITH AND WITHOUT LOCALHOST, FOR SAKE OF TESTING CONVENIENCE
+#cluster.initial_master_nodes: ["{{ elasticsearch_initial_master_nodes }}"]
+#http.host: "0.0.0.0"
+#transport.host: "0.0.0.0"
+#network.host: "0.0.0.0"
+#
+#http.host: ["127.0.0.1","{{ hostvars[inventory_hostname].hostname }}"]
+#transport.host: ["127.0.0.1","{{ hostvars[inventory_hostname].hostname }}"]
+#network.host: ["127.0.0.1","{{ hostvars[inventory_hostname].hostname }}"]

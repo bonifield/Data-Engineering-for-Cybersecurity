@@ -1,0 +1,134 @@
+#===========================
+# install commands
+#===========================
+
+#-------------
+# add kafka user; use wheel instead of sudo on rhel
+sudo useradd -s /bin/bash -d /home/kafka -m -G sudo kafka
+sudo passwd kafka
+# abcd1234
+
+#-------------
+# apply firewall rules
+# ufw
+sudo ufw allow 22,9093,9094/tcp
+# firewalld
+sudo firewall-cmd --zone=public --add-port={22,9093,9094}/tcp –-permanent
+sudo firewall-cmd --reload
+
+#-------------
+# make directories
+sudo mkdir -p {/data/kafka,/opt/kafka/certs}
+sudo chmod 700 {/data/kafka,/opt/kafka/}
+sudo chown -R kafka:kafka {/data/kafka,/opt/kafka/}
+
+#-------------
+# install prerequisites
+# ubuntu
+sudo apt install openjdk-11-jdk -y
+# rhel, centos, rocky
+sudo dnf install java-11-openjdk -y
+
+#-------------
+# switch to kafka user
+sudo su - kafka
+# abcd1234
+cd ~
+
+#-------------
+# download binary
+# get latest version
+wget https://dlcdn.apache.org/kafka/X.Y.Z/kafka_X.Y-A.B.C.tgz
+# extract files
+tar -xzf kafka_X.Y-A.B.C.tgz --strip 1 -C /opt/kafka/
+
+#-------------
+# make p12 files
+openssl pkcs12 -export -inkey tls/keys/kafka01.local.flex.key.pem \
+-in tls/certs/kafka01.local.flex.cert.pem \
+-out tls/certs/kafka01.local.flex.pkcs12
+
+#-------------
+# make jks
+keytool -importkeystore -srckeystore tls/certs/kafka01.local.flex.pkcs12 \
+-srcstoretype pkcs12 -destkeystore tls/certs/kafka01.local.keystore.jks
+
+#-------------
+# make truststore
+keytool -keystore tls/certs/truststore.jks -alias CAChain -import \
+-file tls/certs/ca-chain.cert.pem
+
+#-------------
+# pull down certs
+# on server with tls files
+cd tls/
+python3 -m http.server 8000
+# on each machine
+cd /opt/kafka/certs/
+wget 192.168.8.133:8000/kafka01.local.keystore.jks
+wget 192.168.8.133:8000/truststore.jks
+# same for kafka02, kafka03, etc
+
+#-------------
+# backup server.properties
+cd /opt/kafka/
+mv server.properties server.properties.original
+nano server.properties
+# contents of /opt/kafka/config/server.properties
+nano client-ssl.properties
+# contents of /opt/kafka/config/client-ssl.properties
+
+#-------------
+# generate the cluster ID once
+echo `</dev/urandom tr -dc A-Za-z0-9 | head -c 22`
+# BSjh5WvShpH3pERXbMIJPr
+# set cluster ID on each node
+/opt/kafka/bin/kafka-storage.sh format -t BSjh5WvShpH3pERXbMIJPr -c /opt/kafka/config/server.properties
+
+#-------------
+# add service file
+# please explore the many great options available in service files
+sudo nano /etc/systemd/system/kafka.service
+#######
+[Unit]
+Requires=network.target remote-fs.target
+After=network.target remote-fs.target
+
+[Service]
+Type=simple
+#SyslogIdentifier=kafka
+User=kafka
+ExecStart=/bin/sh -c '/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties > /data/kafka/kafka.log 2>&1'
+ExecStop=/opt/kafka/bin/kafka-server-stop.sh
+Restart=on-abnormal
+
+[Install]
+WantedBy=multi-user.target
+#######
+
+# reload systemd configs, then start kafka
+sudo systemctl daemon-reload
+sudo systemctl start kafka && tail -f /data/kafka/kafka.log
+
+#-------------
+# kafka01 - create a test topic
+/opt/kafka/bin/kafka-topics.sh --create --bootstrap-server kafka01.local:9094 --command-config /opt/kafka/config/client-ssl.properties --replication-factor 1 --partitions 1 --topic encryptedtesttopic
+# kafka01 - send a test message
+echo Hello, World sent from node01 | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server kafka01.local:9094 --producer.config /opt/kafka/config/client-ssl.properties --topic encryptedtesttopic > /dev/null
+
+#-------------
+# kafka02 - list all topics
+# you could also run these from kafka01, but the point is to do it from another server in the cluster
+/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka01.local:9094 --command-config /opt/kafka/config/client-ssl.properties --list
+# kafka02 - consume test message
+/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka01.local:9094 --consumer.config /opt/kafka/config/client-ssl.properties --topic encryptedtesttopic --from-beginning --max-messages 1
+
+#-------------
+# create tool topics
+# create Beats and Rsyslog topics
+/opt/kafka/bin/kafka-topics.sh --create --bootstrap-server kafka01.local:9094 --command-config /opt/kafka/config/client-ssl.properties --replication-factor 2 --partitions 5 --topic filebeat
+/opt/kafka/bin/kafka-topics.sh --create --bootstrap-server kafka01.local:9094 --command-config /opt/kafka/config/client-ssl.properties --replication-factor 2 --partitions 5 --topic packetbeat
+/opt/kafka/bin/kafka-topics.sh --create --bootstrap-server kafka01.local:9094 --command-config /opt/kafka/config/client-ssl.properties --replication-factor 2 --partitions 5 --topic winlogbeat
+/opt/kafka/bin/kafka-topics.sh --create --bootstrap-server kafka01.local:9094 --command-config /opt/kafka/config/client-ssl.properties --replication-factor 2 --partitions 5 --topic rsyslog
+
+# see Rsyslog, Filebeat Logstash configs

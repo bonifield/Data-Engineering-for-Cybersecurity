@@ -1,0 +1,30 @@
+user_name: kafka
+user_group: kafka
+filename: kafka_A.B-X.Y.Z.tgz
+destination_directory: /opt/kafka
+ports:
+  controller: 9093
+  ssl: 9094
+directories:
+  kafka:
+    certs: /opt/kafka/certs/
+
+openssl_path: /usr/bin/openssl
+keytool_path: /usr/bin/keytool
+
+cluster:
+  name: es
+
+gpg:
+  fingerprint: 46095ACC8548582C1A2699A9D27D666CD88E42B4
+  url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+domain: local
+elastic_testnode: "elasticsearch01.{{ domain }}"
+elasticsearch_initial_master_nodes: "elasticsearch01.{{ domain }}"
+
+# https://www.elastic.co/downloads/elastic-agent
+elasticagent_package: "elastic-agent-X.YY.Z-linux-x86_64.tar.gz"
+
+# for your own deployment testing, place a valid enrollment token here
+#enrollment_token: "THhMXzA1VUJldWFiYjJOODJLN0w6SkI2MGhfb01UY09DU05MS1dxY1pTZw=="
