@@ -443,7 +443,10 @@ cd elastic-agent-X.Y.Z-linux-x86_64
   --fleet-server-cert-key=/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem \
   --elastic-agent-cert=/opt/Elastic/Agent/certs/wildcard.local.flex.cert.pem \
   --elastic-agent-cert-key=/opt/Elastic/Agent/certs/wildcard.local.flex.key.nopass.pem \
-  --fleet-server-client-auth=required
+  --fleet-server-client-auth=required \
+  --install-servers
+
+!!! --install-servers was added in Elastic 9.x when installing Agent in server mode !!!
 
 *** snapshot your VM, remember to restart Elasticsearch and Kibana ***
 *** snapshot your VM, remember to restart Elasticsearch and Kibana ***
