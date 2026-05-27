@@ -386,6 +386,9 @@ hosts: https://elasticsearch01.local:9200
 # you could add additional Elasticsearch nodes to this field in the future, such as https://elasticsearch02.local:9200
 default output for agent integrations: toggle ON
 default output for monitoring: toggle ON
+# 9.x CA INSTRUCTIONS
+paste the contents of your CA into the appropriate text box
+# 8.x CA INSTRUCTIONS
 Advanced YAML section, paste the contents of the CA chain. Be sure to copy the root CA and intermediate CA into the following bulleted-list format, with the proper indentation:
 #######
 ssl:
