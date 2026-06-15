@@ -3,6 +3,15 @@ Official repository for code snippets from [Data Engineering for Cybersecurity, 
 
 ## All passwords and passphrases in this book are `abcd1234` unless otherwise specified!
 
+[Extra Content](#extra-content)
+
+[Errata](#errata)
+
+# Extra Content
+
+## Chapter 12
+- Use `--limit <group>` or `--limit "group1,group2"` to target a specific group or groups using `ansible-playbook` when a playbook has `- hosts: all` at the top. See the [official pattern documentation](https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_patterns.html) for more examples.
+
 # Errata
 
 ## Chapter 6

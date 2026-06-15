@@ -1,10 +1,12 @@
 # Chapter 12
 
+[Jump to Extra Content](#extra-content)
+
 # ALL PASSWORDS ARE `abcd1234`
 
 be sure to download the `Linux 64-bit` version of Elastic Agent from [the official website](https://www.elastic.co/downloads/elastic-agent)
 
-## Setup
+## Elastic Setup using Ansible Playbooks
 
 1. Install Ansible and OpenJDK (for Keytool), clone the repo, and acquire Elastic Agent
 ```
@@ -109,3 +111,8 @@ ansible-playbook -JKi inventory-elastic.yml playbook_deploy_elasticagent.yml
 ```
 
 ## Consider Taking a VM Snapshot Now
+
+# Extra Content
+
+## Chapter 12
+- Use `--limit <group>` or `--limit "group1,group2"` to target a specific group or groups using `ansible-playbook` when a playbook has `- hosts: all` at the top. See the [official pattern documentation](https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_patterns.html) for more examples.
